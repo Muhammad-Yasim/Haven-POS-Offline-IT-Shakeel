@@ -1,0 +1,16 @@
+-- ============================================================================
+-- 002_seed_placeholder.sql
+--
+-- This migration intentionally contains NO statements.
+--
+-- The initial business row and admin user are NOT seeded here because:
+--   1. The password must be hashed with Argon2id at runtime (Node.js), which
+--      SQL cannot do.
+--   2. Business details (name, currency, timezone, etc.) are entered by the
+--      user in the first-launch Setup Wizard.
+--
+-- The auth repository's `setup()` function handles all first-launch seeding
+-- programmatically after the user completes the wizard.
+-- ============================================================================
+
+-- (intentionally empty)

@@ -1,0 +1,135 @@
+/* Register Report Styles */
+
+/* Screen layout refinements */
+.reg-report-wrap {
+  width: 100%;
+}
+
+/* Print-only compact summary */
+.reg-print-summary {
+  margin-bottom: 14px;
+  page-break-inside: avoid;
+}
+
+.reg-print-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.reg-print-panel {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+.reg-print-panel-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e3a5f;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1.5px solid #cbd5e1;
+  padding-bottom: 4px;
+  margin-bottom: 5px;
+}
+
+.reg-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+
+.reg-print-table td {
+  padding: 3px 2px;
+  color: #374151;
+}
+
+.reg-print-table .reg-print-label {
+  color: #4b5563;
+}
+
+.reg-print-table .reg-print-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.reg-print-table tr.reg-print-subtotal td {
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.reg-print-table tr.reg-print-highlight td {
+  border-top: 1.5px solid #cbd5e1;
+  border-bottom: 1.5px solid #cbd5e1;
+  background-color: #f8fafc;
+  padding: 4px 3px;
+}
+
+.reg-print-note {
+  font-size: 10px;
+  color: #6b7280;
+  font-style: italic;
+  padding-top: 4px !important;
+}
+
+/* Print refinements for products sold table */
+@media print {
+  .reg-products-card {
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    page-break-inside: auto !important;
+  }
+
+  .reg-products-header {
+    padding: 8px 12px !important;
+    font-size: 11.5px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #d1d5db !important;
+  }
+
+  .reg-products-card .data-table th {
+    background: #f1f5f9 !important;
+    font-size: 12px !important;
+    padding: 5px 8px !important;
+    border-bottom: 1.5px solid #cbd5e1 !important;
+    color: #1e3a5f !important;
+  }
+
+  .reg-products-card .data-table td {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+}
+
+.pdf-export-mode .reg-products-card {
+  border: 1px solid #d1d5db !important;
+  box-shadow: none !important;
+  page-break-inside: auto !important;
+}
+
+.pdf-export-mode .reg-products-header {
+  padding: 8px 12px !important;
+  font-size: 11.5px !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid #d1d5db !important;
+}
+
+.pdf-export-mode .reg-products-card .data-table th {
+  background: #f1f5f9 !important;
+  font-size: 12px !important;
+  padding: 5px 8px !important;
+  border-bottom: 1.5px solid #cbd5e1 !important;
+  color: #1e3a5f !important;
+}
+
+.pdf-export-mode .reg-products-card .data-table td {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}

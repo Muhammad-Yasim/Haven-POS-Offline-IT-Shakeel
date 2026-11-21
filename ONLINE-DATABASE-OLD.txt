@@ -1,0 +1,1222 @@
+CREATE TYPE business_status_enum        AS ENUM ('trial','active','inactive');
+CREATE TYPE reward_status_enum          AS ENUM ('not_yet_earned','pending_payout','credited');
+CREATE TYPE plan_type_enum              AS ENUM ('monthly','yearly');
+CREATE TYPE billing_payment_status_enum AS ENUM ('paid','overdue');
+CREATE TYPE contact_type_enum           AS ENUM ('customer','supplier');
+CREATE TYPE employment_status_enum      AS ENUM ('active','left');
+CREATE TYPE commission_period_enum      AS ENUM ('daily','monthly');
+CREATE TYPE barcode_type_enum           AS ENUM ('EAN13','EAN8','CODE128','CODE39','QR','UPCA');
+CREATE TYPE product_type_enum           AS ENUM ('single','variable','combo');
+CREATE TYPE tax_type_enum               AS ENUM ('inclusive','exclusive');
+CREATE TYPE discount_type_enum          AS ENUM ('fixed','percentage');
+CREATE TYPE purchase_status_enum        AS ENUM ('draft','received','cancelled');
+CREATE TYPE sale_status_enum            AS ENUM ('draft','quotation','confirmed','shipped','returned','partially_returned');
+CREATE TYPE sale_channel_enum           AS ENUM ('pos','manual');
+-- 'transfer' is included now even though stock transfer is out of v1 scope —
+-- adding a value to an existing ENUM later is more friction than an unused
+-- value sitting here today.
+CREATE TYPE stock_reason_enum           AS ENUM ('purchase','sale','purchase_return','sell_return','adjustment','transfer','sale_edit_reversal','sale_edit','purchase_edit' );
+
+
+
+
+CREATE TABLE businesses (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_name TEXT NOT NULL,
+  business_start_date   DATE,
+  currency              TEXT NOT NULL,
+  website_link          TEXT,
+  contact_number        TEXT NOT NULL,
+  alternate_contact     TEXT,
+  country               TEXT NOT NULL,
+  state                 TEXT,
+  city                  TEXT NOT NULL,
+  zip_code              TEXT,
+  landmark              TEXT,
+  time_zone             TEXT NOT NULL,
+  referral_code         CHAR(8),
+  --business_code         TEXT NOT NULL,           -- used at login to identify the tenant
+  status                business_status_enum NOT NULL DEFAULT 'trial',
+  --trial_end_date        DATE NOT NULL DEFAULT (CURRENT_DATE + 14),
+  --terms_accepted_at     TIMESTAMPTZ,
+  settings              JSONB NOT NULL DEFAULT '{}'::jsonb,  -- invoice/receipt etc,future
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+  --updated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+  --CONSTRAINT uq_businesses_business_code UNIQUE (business_code)
+);
+
+CREATE TABLE locations (
+  id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id  int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  address      TEXT,
+  city         TEXT,
+  country      TEXT,
+  is_active    BOOLEAN NOT NULL DEFAULT true,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_locations_business_name UNIQUE (business_id, name)
+);
+
+
+CREATE TABLE users (
+  -- <<<<<CHANGE#4 HERE>>>>>>
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+ business_id int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  first_name           TEXT NOT NULL,
+  last_name            TEXT,
+  username             TEXT NOT NULL,
+  --email                TEXT,
+  -- <<<<<CHANGE#5 HERE>>>>>> password_hash removed — Supabase Auth now
+  -- owns the password (stored in auth.users, not accessible/needed here).
+  is_owner             BOOLEAN NOT NULL DEFAULT false,
+  is_active            BOOLEAN NOT NULL DEFAULT true,  -- login-level toggle, separate from employment_status
+  gender               TEXT,
+  date_of_birth        DATE,
+  --marital_status        TEXT,
+  --blood_group          TEXT,
+  mobile_number        TEXT NOT NULL,
+  id_proof_number      TEXT ,             -- encrypt at application layer before storing
+  guardian_name        TEXT,
+  guardian_relation    TEXT,
+  current_address      TEXT NOT NULL,
+  permanent_address    TEXT,
+  employment_status    employment_status_enum NOT NULL DEFAULT 'active',
+  joining_date         DATE NOT NULL DEFAULT CURRENT_DATE,
+  is_sales_agent       BOOLEAN NOT NULL DEFAULT false,
+  commission_period    commission_period_enum NOT NULL DEFAULT 'daily',
+  custom_fields        JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  --updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_users_business_username UNIQUE (business_id, username)
+  -- <<<<<CHANGE#2 HERE>>>>>>
+);
+
+CREATE TABLE user_locations (           -- which location(s) a staff member is assigned to
+  -- <<<<<CHANGE#7 HERE>>>>>>
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  location_id  int NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, location_id)
+);
+
+CREATE TABLE user_bank_details (
+ id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+  -- <<<<<CHANGE#8 HERE>>>>>>
+  user_id              uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  account_holder_name  TEXT,
+  account_number       TEXT,
+  bank_name            TEXT,
+  branch               TEXT,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+
+
+CREATE TABLE role_permissions (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  -- <<<<<CHANGE#9 HERE>>>>>>
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  module       TEXT NOT NULL,   -- 'purchases','sales','products','contacts','expenses',
+                                 -- 'stock','reports','settings','user_management','pos'
+  can_view     BOOLEAN NOT NULL DEFAULT false,
+  can_create   BOOLEAN NOT NULL DEFAULT false,
+  can_edit     BOOLEAN NOT NULL DEFAULT false,
+  can_delete   BOOLEAN NOT NULL DEFAULT false,
+  CONSTRAINT uq_role_permissions_user_module UNIQUE (user_id, module)
+);
+
+CREATE TABLE contacts (
+id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id      INT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  contact_type     contact_type_enum NOT NULL,
+  name             TEXT NOT NULL,
+  contact_number   TEXT NOT NULL,
+  alternate_number TEXT,
+  email            TEXT,
+  landline         TEXT,
+  opening_balance  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  city             TEXT,
+  country          TEXT,
+  tax_ntn_number   TEXT,           -- mainly for suppliers
+  custom_fields    JSONB NOT NULL DEFAULT '{}'::jsonb,
+  is_active        BOOLEAN NOT NULL DEFAULT true,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  business_name text,
+  address text,
+  location_id      int references locations(id),
+  created_by text,
+  UNIQUE (business_id, contact_number)
+  --updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE contact_ledger (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id    int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  contact_id     int NOT NULL REFERENCES contacts(id) ON DELETE RESTRICT,
+  reference_type TEXT NOT NULL,   -- 'opening_balance','sale','purchase','payment','sale_return','purchase_return'
+  reference_id   int,            -- polymorphic — see design note #6 at top
+  amount         DECIMAL(12,2) NOT NULL,   -- positive = contact owes more, negative = balance reduced
+  --entry_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE categories (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id         int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT not null,  --not null?
+  --parent_category_id id REFERENCES categories(id) ON DELETE SET NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_categories_business_name UNIQUE (business_id, name)
+);
+
+
+CREATE TABLE tax_rates (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id     int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name            TEXT NOT NULL,
+  rate_percentage DECIMAL(5,2) NOT NULL CHECK (rate_percentage >= 0 AND rate_percentage <= 100),
+  is_active       BOOLEAN NOT NULL DEFAULT true,
+  CONSTRAINT uq_tax_rates_business_name UNIQUE (business_id, name)
+);
+
+CREATE TABLE products (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name                   TEXT NOT NULL,
+  sku                    TEXT NOT NULL,             -- auto-generate in app code if left blank
+  barcode_type           barcode_type_enum,
+  barcode_number         TEXT,              -- auto-generate internally if left blank
+  --unit_id                int REFERENCES units(id) ON DELETE RESTRICT,
+  --sub_unit_id            int REFERENCES units(id) ON DELETE RESTRICT,
+  category_id            int REFERENCES categories(id) ON DELETE RESTRICT,
+  alert_quantity         DECIMAL(12,2),
+  description            TEXT,
+  not_for_selling        BOOLEAN NOT NULL DEFAULT false,
+  rack_row_position      TEXT,
+  applicable_tax_id      int REFERENCES tax_rates(id) ON DELETE SET NULL,
+  selling_price_tax_type tax_type_enum,
+  product_type           product_type_enum DEFAULT 'single',
+  cost_price             DECIMAL(12,2) NOT NULL CHECK (cost_price >= 0),
+  default_selling_price  DECIMAL(12,2) NOT NULL CHECK (default_selling_price >= 0),
+  warranty_info          TEXT,
+  is_active              BOOLEAN NOT NULL DEFAULT true,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_products_business_sku UNIQUE (business_id, sku),
+  CONSTRAINT uq_products_business_barcode UNIQUE (business_id, barcode_number)
+  CREATE UNIQUE INDEX uq_products_business_name ON products (business_id, LOWER(TRIM(name)));  --case sensitive
+);
+
+CREATE TABLE product_locations (        -- which location(s) stock this product
+  product_id   int NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  location_id  int NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  PRIMARY KEY (product_id, location_id)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--NO NEED OF PROD VARIANTS/PROD COMBO item now
+CREATE TABLE product_variants (          -- for product_type = 'variable'
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  product_id      int NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  business_id     int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,  -- denormalized for isolation/indexing
+  attributes      JSONB NOT NULL DEFAULT '{}'::jsonb,   -- e.g. {"size":"L","color":"Red"}
+  sku             TEXT,
+  --barcode_number  TEXT,
+  cost_price      DECIMAL(12,2),
+  selling_price   DECIMAL(12,2),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+  --CONSTRAINT uq_product_variants_business_barcode UNIQUE (business_id, barcode_number)
+);
+
+CREATE TABLE product_combo_items (       -- for product_type = 'combo'
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  combo_product_id      int NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  component_product_id  int NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  quantity              DECIMAL(12,2) NOT NULL CHECK (quantity > 0),
+  CONSTRAINT chk_combo_not_self CHECK (combo_product_id <> component_product_id)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE TABLE stock_ledger (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id     int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  product_id      int NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  variant_id      int REFERENCES product_variants(id) ON DELETE SET NULL,
+  location_id     int NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  change_qty      DECIMAL(12,2) NOT NULL,       -- positive = stock in, negative = stock out
+  reason          stock_reason_enum NOT NULL,
+  reference_type  TEXT,          -- 'purchase','sale','purchase_return','sell_return', etc.
+  reference_id    int,          -- polymorphic — see design note #6 at top
+  -- <<<<<CHANGE#10 HERE>>>>>>
+  created_by      uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now().
+  unit_cost 	  DECIMAL(12,2)
+);
+
+CREATE TABLE purchases (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id             int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id             int NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  supplier_id             int REFERENCES contacts(id) ON DELETE RESTRICT,  -- NULL = unspecified/cash supplier
+  purchase_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+  purchase_status         purchase_status_enum NOT NULL DEFAULT 'draft',
+  pay_term                TEXT,
+  supplier_invoice_number TEXT,
+  subtotal                DECIMAL(12,2) NOT NULL DEFAULT 0,
+  discount_type           discount_type_enum,
+  discount_amount         DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_amount              DECIMAL(12,2) NOT NULL DEFAULT 0,
+  shipping_charges        DECIMAL(12,2) NOT NULL DEFAULT 0,
+  grand_total             DECIMAL(12,2) NOT NULL DEFAULT 0,
+  advance_payment         DECIMAL(12,2) NOT NULL DEFAULT 0,
+  payment_method          TEXT,
+  payment_note            TEXT,
+  paid_on                 DATE ,
+  is_active               BOOLEAN NOT NULL DEFAULT true,   -- soft delete
+  -- <<<<<CHANGE#11 HERE>>>>>>
+  created_by              uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- All total/tax/discount fields are written by the server after it
+-- calculates them — never accepted as-is from client input.
+
+CREATE TABLE purchase_items (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  purchase_id      int NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+  product_id       int NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  variant_id       int REFERENCES product_variants(id) ON DELETE RESTRICT,
+  quantity         DECIMAL(12,2) NOT NULL CHECK (quantity > 0),
+  unit_cost        DECIMAL(12,2) NOT NULL CHECK (unit_cost >= 0),
+  discount_type    discount_type_enum,
+  discount_amount  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_id           int REFERENCES tax_rates(id) ON DELETE SET NULL,
+  line_total       DECIMAL(12,2) NOT NULL
+);
+
+CREATE TABLE purchase_returns (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id   int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  purchase_id   int NOT NULL REFERENCES purchases(id) ON DELETE RESTRICT,  -- must always reference the original
+  return_date   DATE NOT NULL DEFAULT CURRENT_DATE,
+  reason        TEXT,
+  total_amount  DECIMAL(12,2) NOT NULL,
+  -- <<<<<CHANGE#12 HERE>>>>>>
+  created_by    uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE purchase_return_items (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  purchase_return_id int NOT NULL REFERENCES purchase_returns(id) ON DELETE CASCADE,
+  purchase_item_id     int NOT NULL REFERENCES purchase_items(id) ON DELETE RESTRICT,
+  quantity_returned    DECIMAL(12,2) NOT NULL CHECK (quantity_returned > 0),
+  amount               DECIMAL(12,2) NOT NULL
+);
+
+
+CREATE TABLE sales (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id       int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id       int NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  customer_id       int REFERENCES contacts(id) ON DELETE RESTRICT,   -- NULL = walk-in
+  -- <<<<<CHANGE#13 HERE>>>>>>
+  sales_agent_id    uuid REFERENCES users(id) ON DELETE SET NULL,
+ -- invoice_number    TEXT NOT NULL,          -- system-generated, sequential per business
+  channel           sale_channel_enum NOT NULL DEFAULT 'manual',   -- 'pos' vs regular Sales 
+  sale_date         DATE NOT NULL DEFAULT CURRENT_DATE,
+  status            sale_status_enum NOT NULL DEFAULT 'draft',
+  pay_term          TEXT,
+  subtotal          DECIMAL(12,2) NOT NULL DEFAULT 0,
+  discount_type     discount_type_enum,
+  discount_amount   DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_amount        DECIMAL(12,2) NOT NULL DEFAULT 0,
+  shipping_charges  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  grand_total       DECIMAL(12,2) NOT NULL DEFAULT 0,
+  payment_method    TEXT,
+  payment_note    TEXT,
+  paid_amount       DECIMAL(12,2) NOT NULL DEFAULT 0,
+  due_amount        DECIMAL(12,2) NOT NULL DEFAULT 0,
+  is_active         BOOLEAN NOT NULL DEFAULT true,   -- soft delete
+  -- <<<<<CHANGE#14 HERE>>>>>>
+  created_by        uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+  staff_note text
+  --CONSTRAINT uq_sales_business_invoice UNIQUE (business_id, invoice_number)
+);
+
+
+CREATE TABLE sale_items (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  sale_id          int NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+  product_id       int NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  variant_id       int REFERENCES product_variants(id) ON DELETE RESTRICT,
+  quantity         DECIMAL(12,2) NOT NULL CHECK (quantity > 0),
+  unit_price       DECIMAL(12,2) NOT NULL CHECK (unit_price >= 0),
+  discount_type    discount_type_enum,
+  discount_amount  DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_id           int REFERENCES tax_rates(id) ON DELETE SET NULL,
+  line_total       DECIMAL(12,2) NOT NULL,
+  unit_cost NUMERIC
+);
+
+CREATE TABLE sell_returns (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id   int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  sale_id       int NOT NULL REFERENCES sales(id) ON DELETE RESTRICT,
+  return_date   DATE NOT NULL DEFAULT CURRENT_DATE,
+  reason        TEXT,
+  total_amount  DECIMAL(12,2) NOT NULL,
+  -- <<<<<CHANGE#15 HERE>>>>>>
+  created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Per your decision, every sell return writes a POSITIVE row straight back
+-- to stock_ledger (reason = 'sell_return') — restocked as sellable
+-- immediately, no separate "written off" state to model.
+
+CREATE TABLE sell_return_items (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  sell_return_id     int NOT NULL REFERENCES sell_returns(id) ON DELETE CASCADE,
+  sale_item_id       int NOT NULL REFERENCES sale_items(id) ON DELETE RESTRICT,
+  quantity_returned  DECIMAL(12,2) NOT NULL CHECK (quantity_returned > 0),
+  amount             DECIMAL(12,2) NOT NULL
+);
+
+CREATE TABLE shipments (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  sale_id          int NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+  shipment_status  TEXT NOT NULL DEFAULT 'pending',
+  shipped_date     DATE,
+  tracking_info    TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE agent_commissions (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id         int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  -- <<<<<CHANGE#16 HERE>>>>>>
+  user_id             uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  sale_id             int NOT NULL REFERENCES sales(id) ON DELETE RESTRICT,
+  commission_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+  commission_amount   DECIMAL(12,2) NOT NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE expense_categories (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id  int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  CONSTRAINT uq_expense_categories_business_name UNIQUE (business_id, name)
+);
+
+CREATE TABLE recurring_expense_templates (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id    int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id    int NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  category_id    int NOT NULL REFERENCES expense_categories(id) ON DELETE RESTRICT,
+  amount         DECIMAL(12,2) NOT NULL,
+  frequency      TEXT NOT NULL,     -- 'monthly','weekly', etc.
+  next_due_date  DATE NOT NULL,
+  is_active      BOOLEAN NOT NULL DEFAULT true,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE expenses (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id            int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id            int NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  category_id            int NOT NULL REFERENCES expense_categories(id) ON DELETE RESTRICT,
+  expense_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+  -- <<<<<CHANGE#17 HERE>>>>>>
+  expense_from_user_id   uuid REFERENCES users(id) ON DELETE SET NULL,
+  amount                 DECIMAL(12,2) NOT NULL,
+  note                   TEXT,
+  payment_method         TEXT,
+  recurring_template_id  int REFERENCES recurring_expense_templates(id) ON DELETE SET NULL,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+  reference_number int,
+  status text check (status in('paid','pending')),
+  title text not null,
+  vendor text
+);
+
+CREATE TABLE notifications (
+      id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id            int NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  type                   TEXT NOT NULL,       -- 'low_stock','invoice_due', etc.
+  message                TEXT NOT NULL,
+  is_read                BOOLEAN NOT NULL DEFAULT false,
+  related_reference_type TEXT,
+  related_reference_id   int,                -- polymorphic — see design note #6 at top
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+
+
+
+
+
+-- ============================================================================
+-- SECTION 14: ROW LEVEL SECURITY (RLS)
+-- ============================================================================
+-- RLS provides database-level tenant isolation.
+--
+-- Flow:
+--
+--   Supabase Auth
+--        │
+--        ▼
+--   auth.uid()
+--        │
+--        ▼
+--   public.users.id
+--        │
+--        ▼
+--   public.users.business_id
+--        │
+--        ▼
+--   Current Business / Tenant
+--
+-- Every authenticated user can only access data belonging to their own
+-- business_id.
+--
+-- IMPORTANT:
+-- Registration of a brand-new business must be performed by your backend
+-- using the Supabase service_role key because the user does not yet have a
+-- public.users row from which current_business_id() can be determined.
+--
+-- The service_role key MUST NEVER be exposed to the frontend.
+-- ============================================================================
+
+
+-- ============================================================================
+-- 1. HELPER FUNCTION: GET CURRENT USER'S BUSINESS ID
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.current_business_id()
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT business_id
+  FROM public.users
+  WHERE id = auth.uid()
+  LIMIT 1;
+$$;
+
+
+-- Restrict who can execute this helper function.
+REVOKE ALL ON FUNCTION public.current_business_id() FROM PUBLIC;
+
+GRANT EXECUTE
+ON FUNCTION public.current_business_id()
+TO authenticated;
+
+
+-- ============================================================================
+-- 2. ENABLE ROW LEVEL SECURITY
+-- ============================================================================
+
+ALTER TABLE businesses                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE locations                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users                       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_locations              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_bank_details           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE role_permissions            ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE contacts                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_ledger              ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE categories                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tax_rates                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_locations            ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE stock_ledger                ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE purchases                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_items              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_returns            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_return_items       ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE sales                       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sale_items                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sell_returns                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sell_return_items            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shipments                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_commissions            ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE expense_categories           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurring_expense_templates  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses                     ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE notifications                ENABLE ROW LEVEL SECURITY;
+
+
+-- ============================================================================
+-- 3. BUSINESSES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_businesses
+ON businesses
+FOR ALL
+TO authenticated
+USING (
+  id = public.current_business_id()
+)
+WITH CHECK (
+  id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 4. USERS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_users
+ON users
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 5. LOCATIONS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_locations
+ON locations
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 6. USER LOCATIONS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_user_locations
+ON user_locations
+FOR ALL
+TO authenticated
+USING (
+  user_id IN (
+    SELECT id
+    FROM users
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  user_id IN (
+    SELECT id
+    FROM users
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 7. USER BANK DETAILS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_user_bank_details
+ON user_bank_details
+FOR ALL
+TO authenticated
+USING (
+  user_id IN (
+    SELECT id
+    FROM users
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  user_id IN (
+    SELECT id
+    FROM users
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 8. ROLE PERMISSIONS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_role_permissions
+ON role_permissions
+FOR ALL
+TO authenticated
+USING (
+  user_id IN (
+    SELECT id
+    FROM users
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  user_id IN (
+    SELECT id
+    FROM users
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 9. CONTACTS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_contacts
+ON contacts
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 10. CONTACT LEDGER
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_contact_ledger
+ON contact_ledger
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 11. CATEGORIES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_categories
+ON categories
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 12. TAX RATES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_tax_rates
+ON tax_rates
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 13. PRODUCTS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_products
+ON products
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 14. PRODUCT LOCATIONS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_product_locations
+ON product_locations
+FOR ALL
+TO authenticated
+USING (
+  product_id IN (
+    SELECT id
+    FROM products
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  product_id IN (
+    SELECT id
+    FROM products
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 15. STOCK LEDGER
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_stock_ledger
+ON stock_ledger
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 16. PURCHASES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_purchases
+ON purchases
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 17. PURCHASE ITEMS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_purchase_items
+ON purchase_items
+FOR ALL
+TO authenticated
+USING (
+  purchase_id IN (
+    SELECT id
+    FROM purchases
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  purchase_id IN (
+    SELECT id
+    FROM purchases
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 18. PURCHASE RETURNS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_purchase_returns
+ON purchase_returns
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 19. PURCHASE RETURN ITEMS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_purchase_return_items
+ON purchase_return_items
+FOR ALL
+TO authenticated
+USING (
+  purchase_return_id IN (
+    SELECT id
+    FROM purchase_returns
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  purchase_return_id IN (
+    SELECT id
+    FROM purchase_returns
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 20. SALES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_sales
+ON sales
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 21. SALE ITEMS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_sale_items
+ON sale_items
+FOR ALL
+TO authenticated
+USING (
+  sale_id IN (
+    SELECT id
+    FROM sales
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  sale_id IN (
+    SELECT id
+    FROM sales
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 22. SELL RETURNS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_sell_returns
+ON sell_returns
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 23. SELL RETURN ITEMS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_sell_return_items
+ON sell_return_items
+FOR ALL
+TO authenticated
+USING (
+  sell_return_id IN (
+    SELECT id
+    FROM sell_returns
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  sell_return_id IN (
+    SELECT id
+    FROM sell_returns
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 24. SHIPMENTS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_shipments
+ON shipments
+FOR ALL
+TO authenticated
+USING (
+  sale_id IN (
+    SELECT id
+    FROM sales
+    WHERE business_id = public.current_business_id()
+  )
+)
+WITH CHECK (
+  sale_id IN (
+    SELECT id
+    FROM sales
+    WHERE business_id = public.current_business_id()
+  )
+);
+
+
+-- ============================================================================
+-- 25. AGENT COMMISSIONS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_agent_commissions
+ON agent_commissions
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 26. EXPENSE CATEGORIES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_expense_categories
+ON expense_categories
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 27. RECURRING EXPENSE TEMPLATES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_recurring_expense_templates
+ON recurring_expense_templates
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 28. EXPENSES
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_expenses
+ON expenses
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+-- ============================================================================
+-- 29. NOTIFICATIONS
+-- ============================================================================
+
+CREATE POLICY tenant_isolation_notifications
+ON notifications
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- ============================================================================
+-- MIGRATION: Register (cash drawer) support for POS Billing
+-- ============================================================================
+-- Adds:
+--   - registers table (id, business_id, location_id, user_id, opened_at,
+--     closed_at, opening_cash, closing_cash, status)
+--   - register_id FK on sales, sell_returns, expenses
+--   - RLS tenant isolation policy for registers, matching every other table
+--
+-- Deliberately NOT stored (calculated dynamically instead, see
+-- src/lib/registerUtils.js and src/pages/registerReport.jsx):
+--   total sales, cash sales, card sales, total refunds, total expenses,
+--   expected cash, cash difference, product quantities sold.
+-- ============================================================================
+
+CREATE TYPE register_status_enum AS ENUM ('open', 'closed');
+
+CREATE TABLE registers (
+  id            INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  business_id   INT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  location_id   INT NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  opened_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  closed_at     TIMESTAMPTZ,
+  opening_cash  DECIMAL(12,2) NOT NULL DEFAULT 0 CHECK (opening_cash >= 0),
+  closing_cash  DECIMAL(12,2) CHECK (closing_cash IS NULL OR closing_cash >= 0),
+  status        register_status_enum NOT NULL DEFAULT 'open'
+);
+
+-- Only one OPEN register per location at a time. A location's drawer is
+-- shared by whoever is on the POS terminal there — this mirrors how
+-- posBilling.jsx already scopes stock/cart state to `locationId`, not to
+-- the logged-in user. Remove this index if you'd rather allow one open
+-- register per (location, user) instead.
+
+CREATE INDEX idx_registers_business_location_status
+  ON registers (business_id, location_id, status);
+
+-- ----------------------------------------------------------------------------
+-- Link transactions to the register that was open when they happened.
+-- Nullable + ON DELETE SET NULL: transactions created outside of an open
+-- register session (e.g. manual sales from the Sales module, or historical
+-- rows from before this feature existed) simply have register_id = NULL and
+-- are excluded from register reports, without breaking anything else.
+-- ----------------------------------------------------------------------------
+
+ALTER TABLE sales        ADD COLUMN register_id INT REFERENCES registers(id) ON DELETE SET NULL;
+ALTER TABLE sell_returns ADD COLUMN register_id INT REFERENCES registers(id) ON DELETE SET NULL;
+ALTER TABLE expenses     ADD COLUMN register_id INT REFERENCES registers(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_sales_register_id        ON sales(register_id);
+CREATE INDEX idx_sell_returns_register_id ON sell_returns(register_id);
+CREATE INDEX idx_expenses_register_id     ON expenses(register_id);
+
+-- ----------------------------------------------------------------------------
+-- RLS — identical tenant-isolation pattern used everywhere else in the schema
+-- ----------------------------------------------------------------------------
+
+ALTER TABLE registers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_registers
+ON registers
+FOR ALL
+TO authenticated
+USING (
+  business_id = public.current_business_id()
+)
+WITH CHECK (
+  business_id = public.current_business_id()
+);
+
+-- No changes needed to the existing tenant_isolation_sales /
+-- tenant_isolation_sell_returns / tenant_isolation_expenses policies —
+-- they already scope by business_id, and register_id is just an extra
+-- nullable column on those same rows.
+
+
+
+
+
+
+-- ============================================================================
+-- MIGRATION: switch registers from one-open-per-location to
+--            one-open-per-user
+-- ============================================================================
+-- Run this AFTER 001_add_registers.sql.
+--
+-- Before: a location could only have one open register, shared by whoever
+-- was on that POS terminal.
+-- After:  each USER can only have one open register at a time (at any
+-- location), but a location can now have multiple open registers
+-- simultaneously if multiple cashiers are each running their own till.
+-- ============================================================================
+
+DROP INDEX IF EXISTS uq_registers_one_open_per_location;
+
+CREATE UNIQUE INDEX uq_registers_one_open_per_user
+  ON registers (user_id)
+  WHERE status = 'open';
+
+-- Helpful for "does this user already have a register open" checks and for
+-- the Active Register page.
+CREATE INDEX IF NOT EXISTS idx_registers_business_user_status
+  ON registers (business_id, user_id, status);
+
+-- ----------------------------------------------------------------------------
+-- Optional: if you ever want to ALSO cap a location to one open register
+-- regardless of user (e.g. single-till locations), add this back on top —
+-- it can coexist with the per-user index above:
+--
+-- CREATE UNIQUE INDEX uq_registers_one_open_per_location
+--   ON registers (location_id)
+--   WHERE status = 'open';
+-- ----------------------------------------------------------------------------

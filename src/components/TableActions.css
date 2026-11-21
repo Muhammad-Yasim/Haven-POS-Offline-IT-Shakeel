@@ -1,0 +1,94 @@
+/*
+ * TableActions — consistent row-action buttons.
+ * Supports both inline and dropdown modes.
+ */
+
+/* ── Inline mode ── */
+.table-actions-cell {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.table-action-btn {
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.table-action-btn:hover:not(:disabled) {
+  background: var(--navy-50);
+  color: var(--navy-800);
+}
+
+.table-action-danger {
+  color: var(--danger) !important;
+}
+
+.table-action-danger:hover:not(:disabled) {
+  background: var(--danger-bg) !important;
+  color: var(--danger) !important;
+}
+
+/* ── Dropdown mode ── */
+.ta-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.ta-dropdown-trigger {
+  padding: 4px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ta-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 200;
+  background: var(--white);
+  border: 1px solid var(--navy-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.ta-dropdown-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--text-primary);
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+.ta-dropdown-item:hover:not(:disabled) {
+  background: var(--navy-50);
+}
+
+.ta-dropdown-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ta-dropdown-item--danger {
+  color: var(--danger);
+}
+
+.ta-dropdown-item--danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger);
+}

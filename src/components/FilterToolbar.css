@@ -1,0 +1,54 @@
+/*
+ * FilterToolbar — extra rules on top of .list-toolbar from index.css.
+ * .list-toolbar already provides: flex, gap: 12px, padding: 16px,
+ * border-bottom, flex-wrap.
+ */
+
+/* Make select inputs inside the toolbar match the search bar height */
+.filter-toolbar select {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--navy-border);
+  background: var(--white);
+  font-size: 14px;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  min-height: 38px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filter-toolbar select:focus {
+  outline: none;
+  border-color: var(--navy-600);
+  box-shadow: 0 0 0 3px var(--navy-focus-ring);
+}
+
+/* Badge on filter toggle buttons */
+.filter-toolbar .filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 100px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* filter-select: standard sizing for filter <select> elements */
+.filter-select {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--navy-border);
+  font-size: 12px;
+  flex: 1 1 110px;
+  min-width: 100px;
+  height: 30px;
+  background: var(--white);
+  color: var(--text-primary);
+}

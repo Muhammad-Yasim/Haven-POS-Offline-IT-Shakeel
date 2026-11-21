@@ -1,0 +1,1131 @@
+import { useEffect, useMemo, useState, Fragment } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import AppLayout from '../components/AppLayout.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../lib/electronAPI.js';
+import {
+  checkLowStockForItems,
+  notifyPaymentDueCustomer,
+} from '../lib/notifications.js';
+import { printSaleInvoice, printThermalSaleInvoice } from '../lib/printInvoice.js';
+import useDataSearch from '../hooks/useDataSearch.js';
+import useDataSort from '../hooks/useDataSort.js';
+import DataSearchBar from '../components/DataSearchBar.jsx';
+import SortableHeader from '../components/SortableHeader.jsx';
+import { getOpenRegisterId } from '../lib/registerUtils.js';
+import { formatTimestamp, todayLocal } from '../lib/timezone.js';
+import useLocationScope from '../hooks/useLocationScope.js';
+import Pagination from '../components/Pagination.jsx';
+import usePagination from '../hooks/usePagination.js';
+import TableActions from '../components/TableActions.jsx';
+
+
+const STATUS_BADGE = {
+  draft: 'badge-info',
+  quotation: 'badge-warning',
+  confirmed: 'badge-success',
+  shipped: 'badge-info',
+  returned: 'badge-danger',
+  partially_returned: 'badge-warning',
+};
+
+export default function Sales() {
+  const { business, profile, can } = useAuth();
+  const { isOwner, isScopedToLocation, scopedLocationIds, hasNoLocations } = useLocationScope();
+  const navigate = useNavigate();
+
+  const [rows, setRows] = useState([]);
+  const [customers, setCustomers] = useState({});
+  const [customerNumbers, setCustomerNumbers] = useState({});
+  const [locations, setLocations] = useState({});
+  const [users, setUsers] = useState({});
+  const [itemTotals, setItemTotals] = useState({});
+
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [items, setItems] = useState({});
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState(null);
+  const [openActionId, setOpenActionId] = useState(null);
+
+  // Dynamic sales return modal
+  const [returnModal, setReturnModal] = useState(null);
+  const [returnItems, setReturnItems] = useState([]);
+  const [returnAlready, setReturnAlready] = useState({});
+  const [returnQtyMap, setReturnQtyMap] = useState({});
+  const [returnDate, setReturnDate] = useState(todayLocal(business?.time_zone));
+  const [returnReason, setReturnReason] = useState('');
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnError, setReturnError] = useState('');
+
+  const [statusFilter, setStatusFilter] =
+    useState('all');
+
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState('all');
+
+  const [locationFilter, setLocationFilter] =
+    useState('');
+
+  const [dateFilter, setDateFilter] = useState('');
+
+  const [paymentMethodFilter, setPaymentMethodFilter] =
+    useState('all');
+
+  const [addedByFilter, setAddedByFilter] =
+    useState('');
+
+
+  const canCreate =
+    profile?.is_owner || can('sales', 'create');
+
+  const canEdit =
+    profile?.is_owner || can('sales', 'edit');
+
+  const canReturn = canCreate;
+
+  const RETURNABLE_STATUSES = [
+    'confirmed',
+    'shipped',
+    'partially_returned',
+  ];
+
+  const load = async () => {
+    if (!business?.id) return;
+
+    setLoading(true);
+    setError('');
+
+    const [
+      salesRes,
+      contactsRes,
+      locationsRes,
+    ] = await Promise.all([
+      api.sales.getAll({
+        business_id: business.id,
+        is_active: 1,
+        scopedLocationIds: (isScopedToLocation && scopedLocationIds.length > 0) ? scopedLocationIds : undefined,
+      }),
+      api.contacts.getAll({ business_id: business.id }),
+      api.locations.getAll(),
+    ]);
+
+    if (salesRes.error) {
+      setError(salesRes.error);
+      setLoading(false);
+      return;
+    }
+
+    if (contactsRes.error) {
+      setError(contactsRes.error);
+    }
+
+    if (locationsRes.error) {
+      setError(locationsRes.error);
+    }
+
+    const saleRows = salesRes.data || [];
+    const contactRows = contactsRes.data || [];
+    const locRows = locationsRes.data || [];
+
+    const totals = {};
+    saleRows.forEach((sale) => {
+      totals[sale.id] = Number(sale.total_items || 0);
+    });
+
+    setRows(saleRows);
+
+    setCustomers(
+      Object.fromEntries(
+        contactRows.map((c) => [c.id, c.name])
+      )
+    );
+
+    setCustomerNumbers(
+      Object.fromEntries(
+        contactRows.map((c) => [c.id, c.contact_number || '—'])
+      )
+    );
+
+    setLocations(
+      Object.fromEntries(
+        locRows.map((l) => [l.id, l.name])
+      )
+    );
+
+    setUsers({
+      [profile?.id || 'admin']: profile?.first_name || profile?.username || 'Admin',
+    });
+
+    setItemTotals(totals);
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+
+    /* eslint-disable-next-line */
+  }, [business?.id]);
+
+  /*
+   * SEARCH
+   *
+   * Only:
+   * - Invoice #
+   * - Customer name
+   * - Total amount
+   */
+  const search = useDataSearch(rows, [
+    (sale) => sale.id,
+
+    (sale) =>
+      customers[sale.customer_id] ||
+      'walk-in',
+
+    (sale) => sale.grand_total,
+  ]);
+
+  const locationOptions = useMemo(
+    () =>
+      Object.entries(locations)
+        .map(([id, name]) => ({
+          id: Number(id),
+          name,
+        }))
+        .sort((a, b) =>
+          a.name.localeCompare(b.name)
+        ),
+    [locations]
+  );
+
+  const customerOptions = useMemo(
+    () =>
+      Object.entries(customers)
+        .map(([id, name]) => ({
+          id: Number(id),
+          name,
+        }))
+        .sort((a, b) =>
+          a.name.localeCompare(b.name)
+        ),
+    [customers]
+  );
+
+  const addedByOptions = useMemo(
+    () =>
+      Object.entries(users)
+        .map(([id, name]) => ({
+          id,
+          name,
+        }))
+        .sort((a, b) =>
+          a.name.localeCompare(b.name)
+        ),
+    [users]
+  );
+
+  const paymentMethodOptions = useMemo(() => {
+    const methods = new Set();
+
+    rows.forEach((sale) => {
+      if (sale.payment_method) {
+        methods.add(sale.payment_method);
+      }
+    });
+
+    return Array.from(methods).sort();
+  }, [rows]);
+
+  /*
+   * SORTING
+   *
+   * Every visible data column is sortable.
+   * Expand and Actions columns are not sortable.
+   */
+  const sortFields = [
+    { key: 'id', label: 'Invoice #', type: 'number' },
+    { key: 'grand_total', label: 'Total Amount', type: 'number' },
+    { key: 'total_items', label: 'Total Items Sold', type: 'number', getValue: (sale) => itemTotals[sale.id] || 0 },
+    { key: 'status', label: 'Status', type: 'text' },
+    { key: 'location', label: 'Location', type: 'text', getValue: (sale) => locations[sale.location_id] || '' },
+    { key: 'created_at', label: 'Time', type: 'date' },
+    { key: 'customer', label: 'Customer', type: 'text', getValue: (sale) => customers[sale.customer_id] || 'Walk-in' },
+    { key: 'customer_number', label: 'Customer Number', type: 'text', getValue: (sale) => sale.customer_id ? customerNumbers[sale.customer_id] || '' : '' },
+    { key: 'payment_method', label: 'Payment Method', type: 'text' },
+    { key: 'paid_amount', label: 'Paid Amount', type: 'number' },
+    { key: 'due_amount', label: 'Due Amount', type: 'number' },
+    { key: 'payment_status', label: 'Payment Status', type: 'text', getValue: (sale) => Number(sale.due_amount || 0) > 0 ? 'due' : 'paid' },
+    { key: 'added_by', label: 'Added By', type: 'text', getValue: (sale) => sale.created_by ? users[sale.created_by] || '' : '' },
+  ];
+
+  const sort = useDataSort(
+    search.filteredData,
+    sortFields
+  );
+
+  /*
+   * FILTERS
+   *
+   * Existing:
+   * - Status
+   * - Payment status
+   * - Location
+   *
+   * Added:
+   * - Customer
+   * - Payment method
+   * - Added by
+   */
+  const filteredRows = useMemo(() => {
+    return sort.sortedData.filter((s) => {
+      if (
+        statusFilter !== 'all' &&
+        s.status !== statusFilter
+      ) {
+        return false;
+      }
+
+      const paymentStatus =
+        Number(s.due_amount || 0) > 0
+          ? 'due'
+          : 'paid';
+
+      if (
+        paymentStatusFilter !== 'all' &&
+        paymentStatus !== paymentStatusFilter
+      ) {
+        return false;
+      }
+
+      if (isScopedToLocation) {
+        // Staff: auto-filter to their assigned locations
+        if (scopedLocationIds.length === 0) return false;
+        if (!scopedLocationIds.includes(s.location_id)) return false;
+      } else if (
+        locationFilter &&
+        s.location_id !== Number(locationFilter)
+      ) {
+        return false;
+      }
+
+      // Date filter — show only sales from the selected day
+      if (dateFilter) {
+        const saleDate = s.created_at ? s.created_at.slice(0, 10) : '';
+        if (saleDate !== dateFilter) return false;
+      }
+
+      if (
+        paymentMethodFilter !== 'all' &&
+        s.payment_method !== paymentMethodFilter
+      ) {
+        return false;
+      }
+
+      if (
+        addedByFilter &&
+        String(s.created_by) !== String(addedByFilter)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    sort.sortedData,
+    statusFilter,
+    paymentStatusFilter,
+    locationFilter,
+    dateFilter,
+    paymentMethodFilter,
+    addedByFilter,
+  ]);
+
+
+  const {
+    currentPage, totalPages, totalItems,
+    paginatedItems: paginatedRows,
+    firstItemIndex, lastItemIndex,
+    goToPage, nextPage, previousPage, hasNextPage, hasPreviousPage,
+  } = usePagination(filteredRows, 20);
+
+  const summaryTotals = useMemo(() => {
+    return paginatedRows.reduce(
+      (totals, sale) => {
+        totals.total += Number(
+          sale.grand_total || 0
+        );
+
+        totals.paid += Number(
+          sale.paid_amount || 0
+        );
+
+        totals.due += Number(
+          sale.due_amount || 0
+        );
+
+        totals.items += Number(
+          itemTotals[sale.id] || 0
+        );
+
+        return totals;
+      },
+      {
+        total: 0,
+        paid: 0,
+        due: 0,
+        items: 0,
+      }
+    );
+  }, [paginatedRows, itemTotals]);
+
+  const toggleExpand = async (saleId) => {
+    if (expanded === saleId) {
+      setExpanded(null);
+      return;
+    }
+
+    setExpanded(saleId);
+
+    if (!items[saleId]) {
+      const { data, error: itemsError } = await api.sales.getItems(saleId);
+
+      if (itemsError) {
+        setError(itemsError);
+        return;
+      }
+
+      setItems((prev) => ({
+        ...prev,
+        [saleId]: data || [],
+      }));
+    }
+  };
+
+  const handlePrint = async (sale, thermal = false) => {
+    setError('');
+    setBusyId(`print-${sale.id}`);
+
+    try {
+      let saleItems = items[sale.id];
+
+      if (!saleItems) {
+        const { data, error: itemsError } = await api.sales.getItems(sale.id);
+
+        if (itemsError) throw new Error(itemsError);
+        saleItems = data || [];
+
+        setItems((prev) => ({
+          ...prev,
+          [sale.id]: saleItems,
+        }));
+      }
+
+      const formattedItems = saleItems.map((it) => ({
+        ...it,
+        product_name: it.product_name || it.products?.name || '—',
+      }));
+
+      let customer = null;
+      if (sale.customer_id) {
+        const { data: contactData } = await api.contacts.getById(sale.customer_id);
+        customer = contactData;
+      }
+
+      const sellerInfo = {
+        name: users[sale.created_by] || 'System',
+      };
+
+      const printArgs = {
+        business,
+        sale,
+        items: formattedItems,
+        customer,
+        seller: sellerInfo,
+        footerNote: business.settings?.invoice_footer_note || '',
+        saleNote: sale.staff_note || '',
+      };
+
+      thermal ? printThermalSaleInvoice(printArgs) : printSaleInvoice(printArgs);
+    } catch (err) {
+      setError(err.message || 'Could not print invoice');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmSale = async (sale) => {
+    setError('');
+    setBusyId(sale.id);
+
+    try {
+      const res = await api.sales.confirmSale(sale.id);
+      if (res?.error) throw new Error(res.error);
+
+      // Best effort notifications
+      try {
+        const itemsRes = await api.sales.getItems(sale.id);
+        const saleItems = itemsRes?.data || [];
+        const productsRes = await api.products.getAll();
+        const productsList = Array.isArray(productsRes?.data)
+          ? productsRes.data
+          : (productsRes?.data?.rows || []);
+        const productsById = Object.fromEntries(
+          productsList.map((p) => [p.id, p])
+        );
+
+        await checkLowStockForItems({
+          businessId: business.id,
+          locationId: sale.location_id,
+          locationName: locations[sale.location_id],
+          items: saleItems.map((it) => ({
+            product_id: it.product_id,
+            quantity: it.quantity,
+          })),
+          productsById,
+        });
+
+        if (sale.customer_id && Number(sale.due_amount || 0) > 0) {
+          await notifyPaymentDueCustomer({
+            businessId: business.id,
+            saleId: sale.id,
+            customerName: customers[sale.customer_id] || 'the customer',
+            dueAmount: Number(sale.due_amount || 0),
+            currency: business.currency,
+          });
+        }
+      } catch {
+        // Notifications are best-effort.
+      }
+
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not confirm this sale.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const openReturn = async (sale) => {
+    setReturnModal(sale);
+    setReturnItems([]);
+    setReturnAlready({});
+    setReturnQtyMap({});
+    setReturnDate(todayLocal(business?.time_zone));
+    setReturnReason('');
+    setReturnError('');
+    setReturnLoading(true);
+
+    try {
+      const { data: saleItems, error: saleItemsError } = await api.sales.getItems(sale.id);
+      if (saleItemsError) throw new Error(saleItemsError);
+      const loadedItems = saleItems || [];
+      if (loadedItems.length === 0) throw new Error('This sale has no items to return.');
+
+      const itemIds = loadedItems.map((it) => it.id);
+      const { data: priorReturns, error: priorReturnsError } = await api.sellReturns.getPriorReturned(itemIds);
+      if (priorReturnsError) throw new Error(priorReturnsError);
+
+      const alreadyReturned = priorReturns || {};
+
+      const hasRemaining = loadedItems.some((it) =>
+        Math.floor(Number(it.quantity || 0)) > Math.floor(alreadyReturned[it.id] || 0)
+      );
+      if (!hasRemaining) throw new Error('All items from this sale have already been returned.');
+
+      setReturnItems(loadedItems);
+      setReturnAlready(alreadyReturned);
+    } catch (err) {
+      setReturnModal(null);
+      setError(err.message || 'Could not load sale items for return.');
+    } finally {
+      setReturnLoading(false);
+    }
+  };
+
+  const closeReturn = () => {
+    if (!returnSubmitting) setReturnModal(null);
+  };
+
+  const returnRows = useMemo(() => {
+    return returnItems.map((it) => {
+      const soldQty = Math.floor(Number(it.quantity || 0));
+      const returned = Math.floor(Number(returnAlready[it.id] || 0));
+      const remaining = Math.max(0, soldQty - returned);
+      const unitEffective = soldQty > 0 ? Number(it.line_total || 0) / soldQty : 0;
+      const qty = Number(returnQtyMap[it.id] || 0);
+      return { item: it, soldQty, returned, remaining, qty, amount: qty * unitEffective };
+    });
+  }, [returnItems, returnAlready, returnQtyMap]);
+
+  const returnTotal = useMemo(
+    () => returnRows.reduce((sum, row) => sum + row.amount, 0),
+    [returnRows]
+  );
+
+  const setReturnQty = (itemId, value, maximumQuantity) => {
+    if (value === '') {
+      setReturnQtyMap((prev) => ({ ...prev, [itemId]: '' }));
+      return;
+    }
+    const qty = Number(value);
+    if (!Number.isInteger(qty) || qty < 0 || qty > maximumQuantity) return;
+    setReturnQtyMap((prev) => ({ ...prev, [itemId]: qty }));
+  };
+
+  const submitReturn = async (e) => {
+    e.preventDefault();
+    setReturnError('');
+    const activeRows = returnRows.filter((r) => r.qty > 0);
+    if (activeRows.length === 0) {
+      setReturnError('Enter a return quantity for at least one item.');
+      return;
+    }
+    for (const r of activeRows) {
+      if (!Number.isInteger(r.qty) || r.qty <= 0 || r.qty > r.remaining) {
+        setReturnError(`Return quantity for ${r.item.products?.name || r.item.product_name || 'this product'} must be a whole number between 1 and ${r.remaining}.`);
+        return;
+      }
+    }
+
+    setReturnSubmitting(true);
+    try {
+      const sale = returnModal;
+      const register_id = await getOpenRegisterId(
+        business.id,
+        profile.id
+      );
+
+      const res = await api.sellReturns.create({
+        business_id: business.id,
+        sale_id: sale.id,
+        register_id,
+        return_date: returnDate,
+        reason: returnReason || null,
+        total_amount: returnTotal,
+        created_by: profile.id,
+        items: activeRows.map((r) => ({
+          sale_item_id: r.item.id,
+          quantity_returned: r.qty,
+          amount: r.amount,
+          product_id: r.item.product_id,
+          variant_id: r.item.variant_id,
+        })),
+      });
+
+      if (res?.error) throw new Error(res.error);
+
+      setItems((prev) => { const next = { ...prev }; delete next[sale.id]; return next; });
+      setReturnModal(null);
+      await load();
+    } catch (err) {
+      setReturnError(err.message || 'Could not return this sale.');
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
+  return (
+    <AppLayout>
+      {error && (
+        <div
+          className="error-text"
+          style={{ marginBottom: 12 }}
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="card list-panel">
+        {/* ── Top bar: dark navy header ── */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '11px 16px',
+          background: 'var(--navy-800)',
+          borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+          flexWrap: 'nowrap',
+        }}>
+          <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '0.01em' }}>
+            Sales
+          </h1>
+
+          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <DataSearchBar
+              query={search.query}
+              setQuery={search.setQuery}
+              clearSearch={search.clearSearch}
+              placeholder="Search invoice #, Customer"
+            />
+          </div>
+
+          <Link to="/reports/sales" className="btn btn-sm" style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+            Sales Report
+          </Link>
+          <Link to="/sales/returns" className="btn btn-sm" style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+            Returns
+          </Link>
+          <Link to="/sales/due" className="btn btn-sm" style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+            Payments Due
+          </Link>
+          {canCreate && (
+            <button
+              className="btn btn-sm"
+              style={{ whiteSpace: 'nowrap', background: '#fff', color: 'var(--navy-800)', fontWeight: 700, border: 'none' }}
+              onClick={() => navigate('/sales/new')}
+            >
+              + New Sale
+            </button>
+          )}
+        </div>
+
+        {/* ── Filter bar: light blue tint ── */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '8px 16px',
+          borderBottom: '1px solid var(--navy-border)',
+          flexWrap: 'wrap',
+          background: 'var(--navy-100)',
+        }}>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All statuses</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="draft">Draft</option>
+            <option value="quotation">Quotation</option>
+            <option value="shipped">Shipped</option>
+            <option value="partially_returned">Partially returned</option>
+            <option value="returned">Returned</option>
+          </select>
+
+          <select
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All pay. status</option>
+            <option value="paid">Paid</option>
+            <option value="due">Due</option>
+          </select>
+
+          {isOwner && (
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All locations</option>
+              {locationOptions.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
+
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            title="Filter by date"
+            className="filter-select"
+          />
+
+          <select
+            value={paymentMethodFilter}
+            onChange={(e) => setPaymentMethodFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All methods</option>
+            {paymentMethodOptions.map((method) => (
+              <option key={method} value={method}>{method.replace('_', ' ')}</option>
+            ))}
+          </select>
+
+          <select
+            value={addedByFilter}
+            onChange={(e) => setAddedByFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All users</option>
+            {addedByOptions.map((user) => (
+              <option key={user.id} value={user.id}>{user.name}</option>
+            ))}
+          </select>
+
+          {(statusFilter !== 'all' || paymentStatusFilter !== 'all' || locationFilter || dateFilter || paymentMethodFilter !== 'all' || addedByFilter) && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ whiteSpace: 'nowrap', fontSize: 12, padding: '5px 10px' }}
+              onClick={() => {
+                setStatusFilter('all');
+                setPaymentStatusFilter('all');
+                setLocationFilter('');
+                setDateFilter('');
+                setPaymentMethodFilter('all');
+                setAddedByFilter('');
+              }}
+            >
+              ✕ Clear
+            </button>
+          )}
+        </div>
+
+        <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
+          <table className="data-table table-compact" style={{ whiteSpace: 'nowrap' }}>
+            <thead>
+              <tr>
+                <th></th>
+                <SortableHeader label="Invoice #" sortKey="id" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <th>Actions</th>
+                <SortableHeader label="Customer" sortKey="customer" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Items" sortKey="total_items" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Total Amount" sortKey="grand_total" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Paid " sortKey="paid_amount" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Due " sortKey="due_amount" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Payment Status" sortKey="payment_status" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Status" sortKey="status" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Location" sortKey="location" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Time" sortKey="created_at" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label=" Method" sortKey="payment_method" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+                <SortableHeader label="Added By" sortKey="added_by" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={14}
+                    className="muted table-empty"
+                  >
+                    Loading…
+                  </td>
+                </tr>
+              )}
+
+              {!loading &&
+                rows.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={14}
+                      className="muted table-empty"
+                    >
+                      No sales yet.
+                    </td>
+                  </tr>
+                )}
+
+              {!loading &&
+                rows.length > 0 &&
+                filteredRows.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={14}
+                      className="muted table-empty"
+                    >
+                      No sales match your search or filters.
+                    </td>
+                  </tr>
+                )}
+
+              {!loading &&
+                paginatedRows.map((s) => {
+                  const paymentStatus =
+                    Number(s.due_amount || 0) > 0
+                      ? 'due'
+                      : 'paid';
+
+                  return (
+                    <Fragment key={s.id}>
+                      <tr
+                        onClick={() => toggleExpand(s.id)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td>
+                          {expanded === s.id ? '▾' : '▸'}
+                        </td>
+                        <td>
+                          #{s.id}
+                        </td>
+                        {/* Actions dropdown */}
+                        <td
+                          id={`action-dropdown-${s.id}`}
+                          className="table-actions"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <TableActions
+                            dropdown
+                            openId={openActionId}
+                            rowId={s.id}
+                            setOpenId={setOpenActionId}
+                            actions={[
+                              {
+                                label: '✏️ Edit',
+                                hidden: !canEdit,
+                                onClick: () => navigate(`/sales/new?edit=${s.id}`),
+                              },
+                              {
+                                label: busyId === s.id ? '...' : '↩️ Return',
+                                hidden: !canReturn || !RETURNABLE_STATUSES.includes(s.status),
+                                disabled: busyId === s.id,
+                                onClick: () => openReturn(s),
+                              },
+                              {
+                                label: busyId === `print-${s.id}` ? '...' : '🖨 Full Page',
+                                disabled: busyId === `print-${s.id}`,
+                                onClick: () => handlePrint(s, false),
+                              },
+                              {
+                                label: busyId === `print-${s.id}` ? '...' : '🧾 Thermal',
+                                disabled: busyId === `print-${s.id}`,
+                                onClick: () => handlePrint(s, true),
+                              },
+                              {
+                                label: busyId === s.id ? '...' : '✅ Confirm',
+                                hidden: !canEdit || (s.status !== 'draft' && s.status !== 'quotation'),
+                                disabled: busyId === s.id,
+                                onClick: () => confirmSale(s),
+                              },
+                            ]}
+                          />
+                        </td>
+                        {/* Customer */}
+                        <td>
+                          {customers[s.customer_id] || 'Walk-in'}
+                        </td>
+                        {/* Items */}
+                        <td>
+                          {itemTotals[s.id] || 0}
+                        </td>
+                        {/* Total Amount */}
+                        <td>
+                          {business?.currency} {Number(s.grand_total || 0).toFixed(2)}
+                        </td>
+                        {/* Paid Amount */}
+                        <td>
+                          {business?.currency} {Number(s.paid_amount || 0).toFixed(2)}
+                        </td>
+                        {/* Due Amount */}
+                        <td>
+                          {business?.currency} {Number(s.due_amount || 0).toFixed(2)}
+                        </td>
+                        {/* Payment Status */}
+                        <td>
+                          <span className={`badge ${paymentStatus === 'paid' ? 'badge-success' : 'badge-warning'}`}>
+                            {paymentStatus}
+                          </span>
+                        </td>
+                        {/* Status */}
+                        <td>
+                          <span className={`badge ${STATUS_BADGE[s.status] || 'badge-info'}`}>
+                            {s.status ? s.status.replace('_', ' ') : '—'}
+                          </span>
+                        </td>
+                        {/* Location */}
+                        <td>
+                          {locations[s.location_id] || '—'}
+                        </td>
+                        {/* Time */}
+                        <td>
+                          {s.created_at ? formatTimestamp(s.created_at, business?.time_zone) : '—'}
+                        </td>
+                        {/* Payment Method */}
+                        <td>
+                          {s.payment_method ? s.payment_method.replace('_', ' ') : '—'}
+                        </td>
+                        {/* Added By */}
+                        <td>
+                          {s.created_by ? users[s.created_by] || '—' : '—'}
+                        </td>
+                      </tr>
+
+                      {expanded === s.id && (
+                        <tr>
+                          <td
+                            colSpan={14}
+                            style={{
+                              background:
+                                'var(--navy-50)',
+                              padding: 0,
+                            }}
+                          >
+                            <table
+                              className="data-table"
+                              style={{
+                                margin:
+                                  '4px 24px 12px',
+                              }}
+                            >
+                              <thead>
+                                <tr>
+                                  <th>
+                                    Product
+                                  </th>
+
+                                  <th>
+                                    Qty
+                                  </th>
+
+                                  <th>
+                                    Unit price
+                                  </th>
+
+                                  <th>
+                                    Line total
+                                  </th>
+                                </tr>
+                              </thead>
+
+                              <tbody>
+                                {(
+                                  items[s.id] || []
+                                ).map((it) => (
+                                  <tr
+                                    key={it.id}
+                                  >
+                                    <td>
+                                      {it.products
+                                        ?.name ||
+                                        '—'}
+                                    </td>
+
+                                    <td>
+                                      {Number(
+                                        it.quantity
+                                      )}
+                                    </td>
+
+                                    <td>
+                                      {
+                                        business?.currency
+                                      }{' '}
+                                      {Number(
+                                        it.unit_price
+                                      ).toFixed(
+                                        2
+                                      )}
+                                    </td>
+
+                                    <td>
+                                      {
+                                        business?.currency
+                                      }{' '}
+                                      {Number(
+                                        it.line_total
+                                      ).toFixed(
+                                        2
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+
+              {!loading &&
+                filteredRows.length > 0 && (
+                  <tr className="sales-summary-row">
+                    <td colSpan={3}>
+                      <strong>Total</strong>
+                    </td>
+                    {/* Customer */}
+                    <td></td>
+                    {/* Items */}
+                    <td>
+                      <strong>{summaryTotals.items}</strong>
+                    </td>
+                    {/* Total Amount */}
+                    <td>
+                      <strong>
+                        {business?.currency}{' '}
+                        {summaryTotals.total.toFixed(2)}
+                      </strong>
+                    </td>
+                    {/* Paid Amount */}
+                    <td>
+                      <strong>
+                        {business?.currency}{' '}
+                        {summaryTotals.paid.toFixed(2)}
+                      </strong>
+                    </td>
+                    {/* Due Amount */}
+                    <td>
+                      <strong>
+                        {business?.currency}{' '}
+                        {summaryTotals.due.toFixed(2)}
+                      </strong>
+                    </td>
+                    {/* Payment Status, Status, Location, Time, Payment Method, Added By */}
+                    <td colSpan={6}></td>
+                  </tr>
+                )}
+            </tbody>
+          </table>
+        </div>
+
+        {!loading && totalItems > 0 && (
+          <div className="no-print">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              firstItemIndex={firstItemIndex}
+              lastItemIndex={lastItemIndex}
+              goToPage={goToPage}
+              nextPage={nextPage}
+              previousPage={previousPage}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+            />
+          </div>
+        )}
+      </div>
+
+      {returnModal && (
+        <div onClick={closeReturn} style={{ position: 'fixed', inset: 0, background: 'rgba(19, 26, 51, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '24px 26px', width: '100%', maxWidth: 760, boxShadow: 'var(--shadow-lg)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 17, marginBottom: 4 }}>Return items — Sale #{returnModal.id}</h2>
+            <p className="muted" style={{ fontSize: 13, marginTop: 0, marginBottom: 14 }}>
+              {customers[returnModal.customer_id] || 'Walk-in'} · {locations[returnModal.location_id] || '—'}
+            </p>
+            {returnLoading ? <div className="muted">Loading items…</div> : (
+              <form onSubmit={submitReturn}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                  <div className="field"><label>Return date</label><input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} /></div>
+                  <div className="field"><label>Reason</label><input value={returnReason} onChange={(e) => setReturnReason(e.target.value)} placeholder="Damaged, wrong item, etc." /></div>
+                </div>
+                <table className="data-table">
+                  <thead><tr><th>Product</th><th>Sold</th><th>Already returned</th><th>Remaining</th><th>Return qty</th><th>Amount</th></tr></thead>
+                  <tbody>{returnRows.map((r) => (
+                    <tr key={r.item.id}>
+                      <td>{r.item.products?.name || '—'}</td><td>{r.soldQty}</td><td>{r.returned}</td><td>{r.remaining}</td>
+                      <td><input type="number" min="0" max={r.remaining} step="1" inputMode="numeric" className="line-input line-input-sm" value={returnQtyMap[r.item.id] || ''} onChange={(e) => setReturnQty(r.item.id, e.target.value, r.remaining)} onKeyDown={(e) => { if (['.', '-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }} onPaste={(e) => { if (!/^\d+$/.test(e.clipboardData.getData('text'))) e.preventDefault(); }} disabled={r.remaining <= 0} /></td>
+                      <td>{business?.currency} {r.amount.toFixed(2)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+                <div className="totals-summary"><div className="totals-grand"><span>Total return amount</span><span>{business?.currency} {returnTotal.toFixed(2)}</span></div></div>
+                {returnError && <div className="error-text" style={{ marginTop: 10 }}>{returnError}</div>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                  <button type="button" className="btn btn-secondary" onClick={closeReturn} disabled={returnSubmitting}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={returnSubmitting}>{returnSubmitting ? 'Saving…' : 'Confirm return'}</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  );
+}

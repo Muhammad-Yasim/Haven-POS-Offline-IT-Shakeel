@@ -1,0 +1,190 @@
+/* =========================================================
+   SIGNUP PAGE — Two-Column Redesign matching Login
+   Haven POS · Professional Redesign
+   ========================================================= */
+
+@import './login.css';
+
+/* Expand card width to accommodate two-column form fields comfortably */
+.signup-card {
+  max-width: 980px;
+  min-height: 560px;
+}
+
+/* Align branding content to the upper side (top) of the left panel */
+.signup-card .auth-left {
+  justify-content: flex-start;
+  padding-top: 48px;
+}
+
+/* Feature list positioned right after description text on left branding panel */
+.signup-features-inline {
+  margin-top: 24px !important;
+  padding-top: 0 !important;
+}
+
+/* Step progress header bar */
+.signup-steps {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.signup-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-radius: 10px;
+  background: #f8f9fc;
+  color: #374151;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  border: 1.5px solid #e2e8f0;
+}
+
+/* Hover state for inactive step buttons */
+.signup-step:not(.signup-step-active):hover {
+  background: #eef2fd;
+  color: #1232b5;
+  border-color: #c7d7f5;
+}
+
+.signup-step:not(.signup-step-active):hover .signup-step-num {
+  background: #dbe4ff;
+  color: #1232b5;
+}
+
+/* Active step button state */
+.signup-step-active {
+  background: linear-gradient(135deg, #1a3fca 0%, #0d1b6e 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 14px rgba(18, 50, 181, 0.28);
+}
+
+.signup-step-active:hover {
+  background: linear-gradient(135deg, #1535b5 0%, #091354 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(18, 50, 181, 0.35);
+}
+
+/* Step number badge */
+.signup-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.signup-step-active .signup-step-num {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+
+.form-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+/* Select dropdown styling matching input fields */
+.field select.select-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 36px 11px 40px !important;
+  box-sizing: border-box;
+  border: 1.5px solid #e5e7ee;
+  border-radius: 10px;
+  background-color: #f8f9fc;
+  color: #1d2545;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.field select.select-input:hover {
+  border-color: #c5c9d6;
+  background-color: #f4f5f9;
+}
+
+.field select.select-input:focus {
+  border-color: #1232b5;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3.5px rgba(18, 50, 181, 0.12);
+}
+
+/* Date input styling */
+.field input[type="date"] {
+  color: #1d2545;
+  cursor: pointer;
+}
+
+/* Action buttons row */
+.signup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.signup-back-btn {
+  flex: 0 0 110px;
+  min-height: 47px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7ee;
+  background: #f8f9fc;
+  color: #1d2545;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.signup-back-btn:hover {
+  background: #eef1f8;
+  border-color: #d1d5e4;
+}
+
+.signup-submit-btn {
+  flex: 1;
+}
+
+/* Mobile & Tablet Responsiveness */
+@media (max-width: 840px) {
+  .signup-card {
+    max-width: 540px;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-grid .full-width {
+    grid-column: 1;
+  }
+}

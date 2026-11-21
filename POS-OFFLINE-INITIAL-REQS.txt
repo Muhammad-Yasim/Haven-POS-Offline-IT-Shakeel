@@ -1,0 +1,258 @@
+# Project: Convert Existing React + Supabase POS into a Fully Offline Windows Desktop POS
+
+I have an existing multi-tenant POS web application built using:
+
+- React + JavaScript
+- Vite
+- React Router
+- Supabase (PostgreSQL + Authentication + RLS)
+- Plain CSS (no CSS framework)
+- Netlify for web deployment
+
+I want to convert this existing application into a **fully offline Windows desktop application using Electron + SQLite**.
+
+## 1. Final Requirements
+
+The new application must:
+
+- Be a Windows desktop application.
+- Be distributed as a downloadable `.exe` installer.
+- Work 100% offline.
+- Not require an internet connection.
+- Not use Supabase or any cloud database.
+- Use SQLite as its local database.
+- Support one business on one computer per installation.
+- Start with a completely fresh database for each new client.
+- Automatically create the database, tables, indexes and default settings on first launch.
+- Require no separate database installation or technical configuration from the client.
+
+The client's installation experience should be:
+
+1. Download the `.exe` installer.
+2. Install the application.
+3. Open the POS.
+4. Complete initial business/owner registration.
+5. Start using the POS.
+
+Everything else should happen automatically.
+
+## 2. Technology Stack
+
+Use:
+
+- Electron for the desktop application.
+- Existing React + JavaScript + Vite frontend.
+- SQLite for local database storage.
+- `better-sqlite3` for SQLite operations.
+- Electron IPC and Preload for secure communication between React and the Electron main process.
+- `electron-builder` for generating the Windows installer.
+
+Do not introduce TypeScript or unnecessary frameworks.
+
+## 3. Existing Application Must Be Preserved
+
+I want to reuse as much of my existing application as possible.
+
+Preserve:
+
+- Existing UI and CSS.
+- Existing pages and components.
+- Existing React Router structure.
+- Existing business logic.
+- Existing calculations and validations.
+- Existing POS billing functionality.
+- Existing reports and FIFO costing logic.
+- Existing inventory and stock ledger logic.
+- Existing permission structure.
+
+Do not redesign the application or unnecessarily change its appearance.
+
+## 4. Database Migration
+
+I have converted the Database from POSTGREQSL to SQLite. Both are given for reference in the folder.
+POSTGRESQL(old) as ONLINE-DATABASE-OLD
+SQLite(old) as POS-DATABASE-OFFLINE-SCHEMA
+
+Adapt PostgreSQL-specific features such as:
+
+- UUIDs
+- Identity/serial columns
+- ENUM types
+- JSONB
+- TIMESTAMPTZ
+- PostgreSQL functions
+- Triggers
+- RLS policies
+
+Use appropriate SQLite alternatives.
+
+Do not assume all existing tables are listed above. Inspect my actual schema and source files before making changes.
+
+## 5. Database Architecture
+
+Store the SQLite database in the user's application data directory, NOT inside the installation folder.
+
+For example:
+
+`%APPDATA%/YourPOS/pos-database.db`
+
+Automatically create:
+
+- Database file.
+- Required tables.
+- Foreign keys and indexes.
+- Default settings.
+- Initial business configuration.
+
+Implement a database migration system with numbered migration files.
+
+Future application updates must never overwrite or delete existing customer databases.
+
+Run migrations safely and create a backup before schema changes.
+
+## 6. Replace Supabase
+
+Completely remove the runtime dependency on Supabase.
+
+Replace:
+
+- Supabase database queries with SQLite services.
+- Supabase authentication with local authentication.
+- Supabase RLS with application-level authorization.
+- Supabase AuthContext integration with local authentication.
+- Supabase storage dependencies, if any, with suitable local storage.
+
+Use secure password hashing such as Argon2id or bcrypt.
+
+Preserve the existing owner, user, business and role-permission concepts.
+
+Enforce business ownership and permissions inside the trusted Electron/database layer, not only in React.
+
+## 7. Database Service Architecture
+
+Do not put unrestricted SQL access in React components.
+
+Create a structured architecture such as:
+
+`src/services/database/`
+
+`electron/main.js`
+
+`electron/preload.js`
+
+`electron/database/`
+
+`electron/database/migrations/`
+
+`electron/database/repositories/`
+
+`electron/ipc/`
+
+Use specific IPC methods for database operations.
+
+For example:
+
+- products.getAll()
+- products.create()
+- sales.create()
+- purchases.update()
+- contacts.getAll()
+- reports.getProfitLoss()
+
+Use secure Electron settings:
+
+- contextIsolation: true
+- nodeIntegration: false
+- sandbox where compatible
+- Restricted IPC communication
+- Input validation
+
+## 8. Existing POS Functionality
+
+All existing functionality must continue working after migration.
+
+Pay particular attention to:
+
+- POS billing and split payments.
+- Sales and sales returns.
+- Purchases and purchase returns.
+- Stock ledger and stock calculations.
+- FIFO costing.
+- Profit and Loss reports.
+- Contact ledger and balances.
+- Registers and cash management.
+- Multiple users and permissions.
+- Location management.
+- Expenses and expense categories.
+- Tax-inclusive and tax-exclusive calculations.
+- Search, filters, sorting and pagination.
+- Invoice and receipt printing.
+- Barcode scanning.
+
+Do not silently remove or simplify existing functionality.
+
+## 9. Backups and Data Safety
+
+We will backups later on
+
+
+## 10. Windows Distribution
+
+Configure `electron-builder` to generate a Windows `.exe` installer.
+
+The installer should include everything required to run the application.
+
+The client should NOT need to install:
+
+- Node.js
+- SQLite
+- PostgreSQL
+- React
+- Supabase
+- Any development dependencies
+
+The application should automatically initialize its database on first launch.
+
+Also plan for future application updates without losing customer data.
+
+## 11. Development Approach
+
+Work incrementally.
+
+Before changing anything:
+
+1. Inspect my existing project structure.
+2. Inspect package.json and Vite configuration.
+3. Inspect Supabase client and all database queries.
+4. Inspect AuthContext and ProtectedRoute.
+5. Inspect my actual database schema and SQL functions.
+6. Identify all dependencies on Supabase.
+7. Prepare a migration plan.
+
+Then implement in phases.
+
+
+## 12. Important Instructions
+
+- Do not rebuild the POS from scratch.
+- Do not unnecessarily modify existing UI or styling.
+- Do not make unrelated changes.
+- Do not invent database columns or relationships.
+- Inspect actual source files before suggesting replacements.
+- When modifying a file, preserve unrelated functionality.
+- When I request a complete file, return the complete updated file.
+- Explain database changes and provide SQL migrations where required.
+- Test for compatibility with the existing business logic.
+- Prioritize data integrity and financial accuracy.
+
+**Final objective:** Convert my existing React + Supabase POS into a professional, installable, completely offline Windows desktop POS using Electron + SQLite, with automatic database initialization, local authentication, preserved POS functionality, secure data handling and reliable backups.
+
+Old working of web just for reference is also given in ONLINE-DOCUMENTATION-OLD.md  . However,some changes are made after that.So that documentation you canjust see as overview.
+
+
+We will be converting module by module.I will tell with each updation.
+
+Some changes that are there:
+There will not module for USER MANAGEMENT.As there will be only one user i.e. admin,managing a single business at a single location.So we can exlclude things that are related to USER MANAGEMENT module.
+
+Kindly make sure that NO previous business logic is changed.Try to copy UI/UX as much as possible.

@@ -1,0 +1,1495 @@
+import { useEffect, useMemo, useState, Fragment } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import AppLayout from '../components/AppLayout.jsx';
+import Pagination from '../components/Pagination.jsx';
+import usePagination from '../hooks/usePagination.js';
+import useDataSearch from '../hooks/useDataSearch.js';
+import useDataSort from '../hooks/useDataSort.js';
+import DataSearchBar from '../components/DataSearchBar.jsx';
+import SortableHeader from '../components/SortableHeader.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../lib/electronAPI.js';
+import { todayLocal } from '../lib/timezone.js';
+import {
+  notifyPaymentDueSupplier,
+  checkLowStockForItems,
+} from '../lib/notifications.js';
+import { downloadPDF, buildPdfFilename } from '../utils/pdfGenerator.js';
+import PrintReportHeader from '../components/PrintReportHeader.jsx';
+import useLocationScope from '../hooks/useLocationScope.js';
+import { printPurchaseInvoice, printThermalPurchaseInvoice } from '../lib/printInvoice.js';
+
+const STATUS_BADGE = {
+  draft: 'badge-warning',
+  received: 'badge-success',
+  cancelled: 'badge-danger',
+};
+
+const PAYMENT_STATUS_BADGE = {
+  due: 'badge-warning',
+  paid: 'badge-success',
+};
+
+export default function Purchases() {
+  const { business, profile, can } = useAuth();
+  const { isOwner, isScopedToLocation, scopedLocationIds } = useLocationScope();
+  const navigate = useNavigate();
+
+  const [rows, setRows] = useState([]);
+  const [suppliers, setSuppliers] = useState({});
+  const [locations, setLocations] = useState({});
+  const [users, setUsers] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [items, setItems] = useState({});
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState(null);
+  const [openActionId, setOpenActionId] = useState(null);
+
+  // ---------- filters ----------
+  const [filterSupplierId, setFilterSupplierId] = useState('');
+  const [filterLocationId, setFilterLocationId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState('');
+  const [filterCreatedBy, setFilterCreatedBy] = useState('');
+
+  // ---------- inline return modal ----------
+  const [returnModal, setReturnModal] = useState(null);
+  const [returnItems, setReturnItems] = useState([]);
+  const [returnAlready, setReturnAlready] = useState({});
+  const [returnQtyMap, setReturnQtyMap] = useState({});
+  const [returnDate, setReturnDate] = useState(
+    todayLocal(business?.time_zone)
+  );
+  const [returnReason, setReturnReason] = useState('');
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnError, setReturnError] = useState('');
+
+  const canCreate =
+    profile?.is_owner || can('purchases', 'create');
+
+  const canEdit =
+    profile?.is_owner || can('purchases', 'edit');
+
+  const load = async () => {
+    if (!business?.id) return;
+
+    setLoading(true);
+
+    const [
+      { data: purchaseRows },
+      { data: contactRows },
+      { data: locRows },
+    ] = await Promise.all([
+      api.purchases.getAll({
+        business_id: business.id,
+        ...(isScopedToLocation && scopedLocationIds.length > 0 ? { location_id: scopedLocationIds[0] } : {}),
+      }),
+      api.contacts.getAll({ business_id: business.id }),
+      api.locations.getAll(),
+    ]);
+
+    setRows(purchaseRows || []);
+
+    setSuppliers(
+      Object.fromEntries(
+        (contactRows || []).map((c) => [c.id, c.name])
+      )
+    );
+
+    setLocations(
+      Object.fromEntries(
+        (locRows || []).map((l) => [l.id, l.name])
+      )
+    );
+
+    setUsers({
+      1: profile?.username || profile?.first_name || 'Admin',
+      [profile?.id]: profile?.username || profile?.first_name || 'Admin',
+    });
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business?.id]);
+
+  // Close the actions dropdown when clicking outside
+  useEffect(() => {
+    if (openActionId === null) return;
+    const handler = (e) => {
+      const dropdownEl = document.getElementById(`action-dropdown-${openActionId}`);
+      if (dropdownEl && !dropdownEl.contains(e.target)) {
+        setOpenActionId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openActionId]);
+
+  const toggleExpand = async (purchaseId) => {
+    if (expanded === purchaseId) {
+      setExpanded(null);
+      return;
+    }
+
+    setExpanded(purchaseId);
+
+    if (!items[purchaseId]) {
+      const { data } = await api.purchases.getItems(purchaseId);
+
+      setItems((prev) => ({
+        ...prev,
+        [purchaseId]: data || [],
+      }));
+    }
+  };
+
+  const getPaymentStatus = (purchase) => {
+    const due =
+      Number(purchase.grand_total) -
+      Number(purchase.advance_payment || 0);
+
+    return due > 0 ? 'due' : 'paid';
+  };
+
+  const handlePrintReceipt = async (purchase, thermal = false) => {
+    setError('');
+    setBusyId(`print-${purchase.id}`);
+
+    try {
+      let purchaseItems = items[purchase.id];
+
+      if (!purchaseItems) {
+        const { data, error: itemsError } = await api.purchases.getItems(purchase.id);
+
+        if (itemsError) throw new Error(itemsError);
+        purchaseItems = data || [];
+
+        setItems((prev) => ({
+          ...prev,
+          [purchase.id]: purchaseItems,
+        }));
+      }
+
+      const formattedItems = purchaseItems.map((it) => ({
+        ...it,
+        product_name: it.products?.name || '—',
+      }));
+
+      let supplier = null;
+      if (purchase.supplier_id) {
+        const { data: contactData } = await api.contacts.getById(purchase.supplier_id);
+        supplier = contactData;
+      }
+
+      const sellerInfo = {
+        name: users[purchase.created_by] || 'System',
+      };
+
+      const printArgs = {
+        business,
+        purchase,
+        items: formattedItems,
+        supplier,
+        seller: sellerInfo,
+        footerNote: business.settings?.invoice_footer_note || '',
+      };
+
+      thermal ? printThermalPurchaseInvoice(printArgs) : printPurchaseInvoice(printArgs);
+    } catch (err) {
+      setError(err.message || 'Could not print purchase receipt');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const markReceived = async (purchase) => {
+    setError('');
+    setBusyId(purchase.id);
+
+    try {
+      const { error: markErr } = await api.purchases.markReceived(purchase.id);
+
+      if (markErr) throw new Error(markErr);
+
+      if (purchase.supplier_id) {
+        const owed =
+          Number(purchase.grand_total) -
+          Number(purchase.advance_payment);
+
+        try {
+          await notifyPaymentDueSupplier({
+            businessId: business.id,
+            purchaseId: purchase.id,
+            supplierName:
+              suppliers[purchase.supplier_id] || 'the supplier',
+            owedAmount: owed,
+            currency: business.currency,
+          });
+        } catch {
+          // best-effort
+        }
+      }
+
+      load();
+    } catch (err) {
+      setError(
+        err.message ||
+        'Could not mark this purchase as received.'
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // ---------- search fields ----------
+  const purchaseSearchFields = useMemo(
+    () => [
+      (purchase) =>
+        suppliers[purchase.supplier_id] || '',
+      (purchase) =>
+        purchase.grand_total ?? '',
+    ],
+    [suppliers]
+  );
+
+  // ---------- filtering ----------
+  const filteredRows = useMemo(() => {
+    return rows.filter((purchase) => {
+      const paymentStatus =
+        getPaymentStatus(purchase);
+
+      const createdById =
+        purchase.created_by || purchase.added_by;
+
+      const matchesSupplier =
+        !filterSupplierId ||
+        String(purchase.supplier_id) === filterSupplierId;
+
+      const matchesLocation =
+        isScopedToLocation
+          ? (scopedLocationIds.length === 0
+            ? false
+            : scopedLocationIds.includes(purchase.location_id))
+          : (!filterLocationId ||
+            String(purchase.location_id) === filterLocationId);
+
+      const matchesStatus =
+        !filterStatus ||
+        purchase.purchase_status === filterStatus;
+
+      const matchesPaymentStatus =
+        !filterPaymentStatus ||
+        paymentStatus === filterPaymentStatus;
+
+      const matchesCreatedBy =
+        !filterCreatedBy ||
+        String(createdById) === filterCreatedBy;
+
+      return (
+        matchesSupplier &&
+        matchesLocation &&
+        matchesStatus &&
+        matchesPaymentStatus &&
+        matchesCreatedBy
+      );
+    });
+  }, [
+    rows,
+    filterSupplierId,
+    filterLocationId,
+    filterStatus,
+    filterPaymentStatus,
+    filterCreatedBy,
+  ]);
+
+  // ---------- search ----------
+  const search = useDataSearch(
+    filteredRows,
+    purchaseSearchFields
+  );
+
+  // ---------- sorting ----------
+  const purchaseSortFields = useMemo(
+    () => [
+      {
+        key: 'purchase_date',
+        label: 'Date',
+        type: 'date',
+      },
+      {
+        key: 'supplier',
+        label: 'Supplier',
+        type: 'text',
+        getValue: (purchase) =>
+          suppliers[purchase.supplier_id] ||
+          'Cash / unspecified',
+      },
+      {
+        key: 'location',
+        label: 'Location',
+        type: 'text',
+        getValue: (purchase) =>
+          locations[purchase.location_id] || '',
+      },
+      {
+        key: 'purchase_status',
+        label: 'Status',
+        type: 'text',
+      },
+      /* Payment Status sort field removed
+      {
+        key: 'payment_status',
+        label: 'Payment Status',
+        type: 'text',
+        getValue: (purchase) =>
+          getPaymentStatus(purchase),
+      },
+      */
+      {
+        key: 'created_by',
+        label: 'Added By',
+        type: 'text',
+        getValue: (purchase) => {
+          const createdById =
+            purchase.created_by ||
+            purchase.added_by;
+
+          return users[createdById] || '';
+        },
+      },
+      {
+        key: 'grand_total',
+        label: 'Total',
+        type: 'number',
+      },
+      {
+        key: 'due_amount',
+        label: 'Due',
+        type: 'number',
+        getValue: (purchase) =>
+          Number(purchase.grand_total || 0) -
+          Number(purchase.advance_payment || 0),
+      },
+    ],
+    [suppliers, locations, users]
+  );
+
+  const sort = useDataSort(
+    search.filteredData,
+    purchaseSortFields
+  );
+
+  const {
+    currentPage,
+    totalPages,
+    totalItems,
+    paginatedItems,
+    firstItemIndex,
+    lastItemIndex,
+    goToPage,
+    nextPage,
+    previousPage,
+    hasNextPage,
+    hasPreviousPage,
+  } = usePagination(sort.sortedData, 20);
+
+  const currentPageTotal = paginatedItems.reduce(
+    (sum, purchase) =>
+      sum + Number(purchase.grand_total || 0),
+    0
+  );
+
+  const currentPageDue = paginatedItems.reduce(
+    (sum, purchase) =>
+      sum +
+      Number(purchase.grand_total || 0) -
+      Number(purchase.advance_payment || 0),
+    0
+  );
+
+  // ---------- filter options ----------
+  const supplierFilterOptions = useMemo(() => {
+    const ids = new Set(
+      rows
+        .map((r) => r.supplier_id)
+        .filter(Boolean)
+    );
+
+    return [...ids]
+      .map((id) => ({
+        id,
+        name: suppliers[id] || 'Unknown supplier',
+      }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+  }, [rows, suppliers]);
+
+  const locationFilterOptions = useMemo(() => {
+    const ids = new Set(
+      rows
+        .map((r) => r.location_id)
+        .filter(Boolean)
+    );
+
+    return [...ids]
+      .map((id) => ({
+        id,
+        name: locations[id] || 'Unknown location',
+      }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+  }, [rows, locations]);
+
+  const statusFilterOptions = useMemo(() => {
+    return [
+      ...new Set(
+        rows
+          .map((r) => r.purchase_status)
+          .filter(Boolean)
+      ),
+    ].sort();
+  }, [rows]);
+
+  const paymentStatusFilterOptions = useMemo(() => {
+    return ['due', 'paid'];
+  }, []);
+
+  const createdByFilterOptions = useMemo(() => {
+    const ids = new Set(
+      rows
+        .map((r) => r.created_by || r.added_by)
+        .filter(Boolean)
+    );
+
+    return [...ids]
+      .map((id) => ({
+        id,
+        name: users[id] || 'Unknown user',
+      }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+  }, [rows, users]);
+
+  const clearFilters = () => {
+    setFilterSupplierId('');
+    setFilterLocationId('');
+    setFilterStatus('');
+    setFilterPaymentStatus('');
+    setFilterCreatedBy('');
+  };
+
+  const hasActiveFilters =
+    filterSupplierId ||
+    filterLocationId ||
+    filterStatus ||
+    filterPaymentStatus ||
+    filterCreatedBy;
+
+  // ---------- inline return modal ----------
+  const openReturn = async (purchase) => {
+    setReturnModal(purchase);
+    setReturnDate(
+      todayLocal(business?.time_zone)
+    );
+    setReturnReason('');
+    setReturnQtyMap({});
+    setReturnError('');
+    setReturnLoading(true);
+
+    const { data } = await api.purchases.getItems(purchase.id);
+
+    const its = data || [];
+
+    setReturnItems(its);
+
+    const itemIds = its.map((it) => it.id);
+
+    if (itemIds.length > 0) {
+      const { data: returned } = await api.purchaseReturns.getPriorReturned(itemIds);
+      setReturnAlready(returned || {});
+    } else {
+      setReturnAlready({});
+    }
+
+    setReturnLoading(false);
+  };
+
+  const closeReturn = () => {
+    if (!returnSubmitting) {
+      setReturnModal(null);
+    }
+  };
+
+  const returnRows = useMemo(
+    () =>
+      returnItems.map((it) => {
+        const purchasedQty = Number(it.quantity);
+        const returned = returnAlready[it.id] || 0;
+        const remaining = purchasedQty - returned;
+
+        const unitEffective =
+          purchasedQty > 0
+            ? Math.round((Number(it.line_total) / purchasedQty) * 100) / 100
+            : 0;
+
+        const qty = Number(
+          returnQtyMap[it.id] || 0
+        );
+
+        const amount = Math.round((qty * unitEffective) * 100) / 100;
+
+        return {
+          item: it,
+          purchasedQty,
+          returned,
+          remaining,
+          unitEffective,
+          qty,
+          amount,
+        };
+      }),
+    [returnItems, returnAlready, returnQtyMap]
+  );
+
+  const returnTotal = returnRows.reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
+
+  const setReturnQty = (itemId, value) => {
+    setReturnQtyMap((prev) => ({
+      ...prev,
+      [itemId]: value,
+    }));
+  };
+
+  const submitReturn = async (e) => {
+    e.preventDefault();
+    setReturnError('');
+
+    const activeRows = returnRows.filter(
+      (r) => r.qty > 0
+    );
+
+    if (activeRows.length === 0) {
+      setReturnError(
+        'Enter a return quantity for at least one item.'
+      );
+      return;
+    }
+
+    for (const r of activeRows) {
+      if (!Number.isInteger(r.qty)) {
+        setReturnError(
+          `Return quantity for ${r.item.products?.name || 'this product'
+          } must be a whole number.`
+        );
+        return;
+      }
+
+      if (r.qty < 0) {
+        setReturnError(
+          `Return quantity for ${r.item.products?.name || 'this product'
+          } cannot be negative.`
+        );
+        return;
+      }
+
+      if (r.qty > Math.floor(r.remaining)) {
+        setReturnError(
+          `Return quantity for ${r.item.products?.name || 'this product'
+          } cannot be greater than the remaining quantity (${Math.floor(
+            r.remaining
+          )}).`
+        );
+        return;
+      }
+    }
+
+    setReturnSubmitting(true);
+
+    try {
+      const itemRows = activeRows.map((r) => ({
+        purchase_item_id: r.item.id,
+        product_id: r.item.product_id,
+        quantity_returned: r.qty,
+        amount: r.amount,
+      }));
+
+      const { error: prErr } = await api.purchaseReturns.create({
+        business_id: business.id,
+        purchase_id: returnModal.id,
+        return_date: returnDate,
+        reason: returnReason || null,
+        total_amount: returnTotal,
+        created_by: profile.id,
+        items: itemRows,
+      });
+
+      if (prErr) throw new Error(prErr);
+
+      try {
+        const productsById = Object.fromEntries(
+          activeRows.map((r) => [
+            r.item.product_id,
+            r.item.products,
+          ])
+        );
+
+        await checkLowStockForItems({
+          businessId: business.id,
+          locationId: returnModal.location_id,
+          items: activeRows.map((r) => ({
+            product_id: r.item.product_id,
+            quantity: r.qty,
+          })),
+          productsById,
+        });
+      } catch {
+        // best-effort
+      }
+
+      setReturnModal(null);
+      load();
+    } catch (err) {
+      setReturnError(
+        err.message ||
+        'Could not save this return.'
+      );
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
+  return (
+    <AppLayout>
+      {error && (
+        <div className="error-text" style={{ marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
+
+      <div className="card list-panel" id="purchases-report-content">
+        <PrintReportHeader title="Purchases List" />
+
+        {/* ── Top bar: dark navy header ── */}
+        <div className="no-print" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '11px 16px',
+          background: 'var(--navy-800)',
+          borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+          flexWrap: 'nowrap',
+        }}>
+          <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', color: '#fff', letterSpacing: '0.01em' }}>
+            Purchases
+          </h1>
+
+          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <DataSearchBar
+              query={search.query}
+              setQuery={search.setQuery}
+              clearSearch={search.clearSearch}
+              placeholder="Search supplier"
+            />
+          </div>
+
+          <Link to="/reports/purchases" className="btn btn-sm" style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+            Purchases Report
+          </Link>
+          <Link to="/purchases/returns" className="btn btn-sm" style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+            Returns
+          </Link>
+          <Link to="/purchases/due" className="btn btn-sm" style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}>
+            Payments Due
+          </Link>
+          <button
+            className="btn btn-sm"
+            style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}
+            onClick={() => window.print()}
+          > 
+            🖨 Print
+          </button>
+          <button
+            className="btn btn-sm"
+            style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}
+            onClick={() => {
+              const filename = buildPdfFilename('Purchases_List');
+              downloadPDF(filename);
+            }}
+          >
+            📄 PDF
+          </button>
+          {canCreate && (
+            <button
+              className="btn btn-sm"
+              style={{ whiteSpace: 'nowrap', background: '#fff', color: 'var(--navy-800)', fontWeight: 700, border: 'none' }}
+              onClick={() => navigate('/purchases/new')}
+            >
+              + New Purchase
+            </button>
+          )}
+        </div>
+
+        {/* ── Filter bar: light blue tint ── */}
+        <div className="no-print" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '8px 16px',
+          borderBottom: '1px solid var(--navy-border)',
+          flexWrap: 'wrap',
+          background: 'var(--navy-100)',
+        }}>
+          <select
+            value={filterSupplierId}
+            onChange={(e) => setFilterSupplierId(e.target.value)}
+            style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--navy-border)', fontSize: 12, flex: '1 1 110px', minWidth: 100 }}
+          >
+            <option value="">All suppliers</option>
+            {supplierFilterOptions.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+
+          {/* Location filter removed
+          {isOwner && (
+            <select
+              value={filterLocationId}
+              onChange={(e) => setFilterLocationId(e.target.value)}
+              style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--navy-border)', fontSize: 12, flex: '1 1 110px', minWidth: 100 }}
+            >
+              <option value="">All locations</option>
+              {locationFilterOptions.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
+          */}
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--navy-border)', fontSize: 12, flex: '1 1 110px', minWidth: 100 }}
+          >
+            <option value="">All statuses</option>
+            {statusFilterOptions.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+
+          {/* Payment status filter removed
+          <select
+            value={filterPaymentStatus}
+            onChange={(e) => setFilterPaymentStatus(e.target.value)}
+            style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--navy-border)', fontSize: 12, flex: '1 1 110px', minWidth: 100 }}
+          >
+            <option value="">All pay. status</option>
+            {paymentStatusFilterOptions.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+          */}
+
+          <select
+            value={filterCreatedBy}
+            onChange={(e) => setFilterCreatedBy(e.target.value)}
+            style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--navy-border)', fontSize: 12, flex: '1 1 110px', minWidth: 100 }}
+          >
+            <option value="">All users</option>
+            {createdByFilterOptions.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+
+          {(hasActiveFilters || search.isActive) && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ whiteSpace: 'nowrap', fontSize: 12, padding: '5px 10px' }}
+              onClick={() => { clearFilters(); search.clearSearch(); }}
+            >
+              ✕ Clear
+            </button>
+          )}
+        </div>
+
+        <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
+          <table className="data-table table-compact" style={{ whiteSpace: 'nowrap' }}>
+            <thead>
+              <tr>
+                <th className="no-print"></th>
+
+                <SortableHeader
+                  label="Date"
+                  sortKey="purchase_date"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+
+                <th className="no-print">Actions</th>
+
+                <SortableHeader
+                  label="Supplier"
+                  sortKey="supplier"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+
+                {/* Location header removed
+                <SortableHeader
+                  label="Location"
+                  sortKey="location"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+                */}
+
+                <SortableHeader
+                  className="no-print"
+                  label="Status"
+                  sortKey="purchase_status"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+
+                {/* Payment Status header removed
+                <SortableHeader
+                  className="no-print"
+                  label="Payment Status"
+                  sortKey="payment_status"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+                */}
+
+                <SortableHeader
+                  label="Added By"
+                  sortKey="created_by"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+
+                <SortableHeader
+                  label="Total"
+                  sortKey="grand_total"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+
+                <SortableHeader
+                  label="Due"
+                  sortKey="due_amount"
+                  currentSortKey={sort.sortKey}
+                  sortDirection={sort.sortDirection}
+                  toggleSortKey={sort.toggleSortKey}
+                />
+
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="muted table-empty"
+                  >
+                    Loading…
+                  </td>
+                </tr>
+              )}
+
+              {!loading &&
+                sort.sortedData.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="muted table-empty"
+                    >
+                      No purchases match.
+                    </td>
+                  </tr>
+                )}
+
+              {!loading &&
+                paginatedItems.map((p) => {
+                  const paymentStatus =
+                    getPaymentStatus(p);
+
+                  const addedById =
+                    p.created_by || p.added_by;
+
+                  const addedBy =
+                    users[addedById] || '—';
+
+                  return (
+                    <Fragment key={p.id}>
+                      <tr
+                        onClick={() =>
+                          toggleExpand(p.id)
+                        }
+                        style={{
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <td className="no-print">
+                          {expanded === p.id
+                            ? '▾'
+                            : '▸'}
+                        </td>
+
+                        <td>{p.purchase_date}</td>
+
+                        <td
+                          className="table-actions no-print"
+                          style={{ position: 'relative' }}
+                          onClick={(e) => e.stopPropagation()}
+                          id={`action-dropdown-${p.id}`}
+                        >
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '4px 10px', fontSize: '11px', whiteSpace: 'nowrap' }}
+                            onClick={() => setOpenActionId(openActionId === p.id ? null : p.id)}
+                          >
+                            Actions ▾
+                          </button>
+                          {openActionId === p.id && (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                zIndex: 200,
+                                background: 'var(--white)',
+                                border: '1px solid var(--navy-border)',
+                                borderRadius: 6,
+                                boxShadow: 'var(--shadow-lg)',
+                                minWidth: 130,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                padding: '4px 0',
+                              }}
+                            >
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ borderRadius: 0, border: 'none', padding: '7px 14px', fontSize: '12px', textAlign: 'left', justifyContent: 'flex-start' }}
+                                  onClick={() => { setOpenActionId(null); navigate(`/purchases/new?id=${p.id}`); }}
+                                >
+                                  ✏️ Edit
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ borderRadius: 0, border: 'none', padding: '7px 14px', fontSize: '12px', textAlign: 'left', justifyContent: 'flex-start' }}
+                                disabled={busyId === `print-${p.id}`}
+                                onClick={() => { setOpenActionId(null); handlePrintReceipt(p, false); }}
+                              >
+                                {busyId === `print-${p.id}` ? '...' : '🖨 Full Page'}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ borderRadius: 0, border: 'none', padding: '7px 14px', fontSize: '12px', textAlign: 'left', justifyContent: 'flex-start' }}
+                                disabled={busyId === `print-${p.id}`}
+                                onClick={() => { setOpenActionId(null); handlePrintReceipt(p, true); }}
+                              >
+                                {busyId === `print-${p.id}` ? '...' : '🧾 Thermal'}
+                              </button>
+                              {canEdit && p.purchase_status === 'draft' && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ borderRadius: 0, border: 'none', padding: '7px 14px', fontSize: '12px', textAlign: 'left', justifyContent: 'flex-start' }}
+                                  disabled={busyId === p.id}
+                                  onClick={() => { setOpenActionId(null); markReceived(p); }}
+                                >
+                                  {busyId === p.id ? 'Receiving…' : '📥 Mark received'}
+                                </button>
+                              )}
+                              {canEdit && p.purchase_status === 'received' && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ borderRadius: 0, border: 'none', padding: '7px 14px', fontSize: '12px', textAlign: 'left', justifyContent: 'flex-start' }}
+                                  onClick={() => { setOpenActionId(null); openReturn(p); }}
+                                >
+                                  ↩️ Return
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        <td>
+                          {suppliers[p.supplier_id] ||
+                            'Cash / unspecified'}
+                        </td>
+
+                        {/* Location column removed
+                        <td>
+                          {locations[p.location_id] ||
+                            '—'}
+                        </td>
+                        */}
+
+                        <td className="no-print">
+                          <span
+                            className={`badge ${STATUS_BADGE[
+                              p.purchase_status
+                            ]
+                              }`}
+                          >
+                            {p.purchase_status}
+                          </span>
+                        </td>
+
+                        {/* Payment Status column removed
+                        <td className="no-print">
+                          <span
+                            className={`badge ${PAYMENT_STATUS_BADGE[
+                              paymentStatus
+                            ]
+                              }`}
+                          >
+                            {paymentStatus}
+                          </span>
+                        </td>
+                        */}
+
+                        <td>{addedBy}</td>
+
+                        <td>
+                          {business?.currency}{' '}
+                          {Number(
+                            p.grand_total
+                          ).toFixed(2)}
+                        </td>
+
+                        <td>
+                          {business?.currency}{' '}
+                          {(
+                            Number(p.grand_total) -
+                            Number(
+                              p.advance_payment
+                            )
+                          ).toFixed(2)}
+                        </td>
+                      </tr>
+
+                      {expanded === p.id && (
+                        <tr>
+                          <td
+                            colSpan={8}
+                            style={{
+                              background:
+                                'var(--navy-50)',
+                              padding: 0,
+                            }}
+                          >
+                            <table
+                              className="data-table"
+                              style={{
+                                margin:
+                                  '4px 24px 12px',
+                              }}
+                            >
+                              <thead>
+                                <tr>
+                                  <th>Product</th>
+                                  <th>Qty</th>
+                                  <th>Unit cost</th>
+                                  <th>Line total</th>
+                                </tr>
+                              </thead>
+
+                              <tbody>
+                                {(
+                                  items[p.id] || []
+                                ).map((it) => (
+                                  <tr
+                                    key={it.id}
+                                  >
+                                    <td>
+                                      {it.products
+                                        ?.name ||
+                                        '—'}
+                                    </td>
+
+                                    <td>
+                                      {Number(
+                                        it.quantity
+                                      )}
+                                    </td>
+
+                                    <td>
+                                      {
+                                        business?.currency
+                                      }{' '}
+                                      {Number(
+                                        it.unit_cost
+                                      ).toFixed(2)}
+                                    </td>
+
+                                    <td>
+                                      {
+                                        business?.currency
+                                      }{' '}
+                                      {Number(
+                                        it.line_total
+                                      ).toFixed(2)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+
+              {!loading &&
+                paginatedItems.length > 0 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      style={{
+                        textAlign: 'right',
+                        fontWeight: 700,
+                      }}
+                    >
+                      TOTAL
+                    </td>
+
+                    <td
+                      style={{
+                        fontWeight: 700,
+                      }}
+                    >
+                      {business?.currency}{' '}
+                      {currentPageTotal.toFixed(2)}
+                    </td>
+
+                    <td
+                      style={{
+                        fontWeight: 700,
+                      }}
+                    >
+                      {business?.currency}{' '}
+                      {currentPageDue.toFixed(2)}
+                    </td>
+
+                    <td></td>
+                  </tr>
+                )}
+            </tbody>
+          </table>
+        </div>
+
+        {!loading &&
+          sort.sortedData.length > 0 && (
+            <div className="no-print">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                firstItemIndex={firstItemIndex}
+                lastItemIndex={lastItemIndex}
+                goToPage={goToPage}
+                nextPage={nextPage}
+                previousPage={previousPage}
+                hasNextPage={hasNextPage}
+                hasPreviousPage={hasPreviousPage}
+              />
+            </div>
+          )}
+      </div>
+
+      {/* ---------- inline return modal ---------- */}
+      {returnModal && (
+        <div
+          onClick={closeReturn}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background:
+              'rgba(19, 26, 51, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+            style={{
+              background: 'var(--white)',
+              borderRadius:
+                'var(--radius-lg)',
+              padding: '24px 26px',
+              width: '100%',
+              maxWidth: 640,
+              boxShadow:
+                'var(--shadow-lg)',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: 17,
+                marginBottom: 4,
+              }}
+            >
+              Return items — Purchase #
+              {returnModal.id}
+            </h2>
+
+            <p
+              className="muted"
+              style={{
+                fontSize: 13,
+                marginTop: 0,
+                marginBottom: 14,
+              }}
+            >
+              {suppliers[
+                returnModal.supplier_id
+              ] || 'Cash / unspecified'}{' '}
+              ·{' '}
+              {locations[
+                returnModal.location_id
+              ]}
+            </p>
+
+            {returnLoading ? (
+              <div className="muted">
+                Loading items…
+              </div>
+            ) : (
+              <>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns:
+                      '1fr 1fr',
+                    gap: 10,
+                    marginBottom: 14,
+                  }}
+                >
+                  <div className="field">
+                    <label>
+                      Return date
+                    </label>
+
+                    <input
+                      type="date"
+                      value={returnDate}
+                      onChange={(e) =>
+                        setReturnDate(
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label>
+                      Reason
+                    </label>
+
+                    <input
+                      value={returnReason}
+                      onChange={(e) =>
+                        setReturnReason(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Damaged, wrong item, etc."
+                    />
+                  </div>
+                </div>
+
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Purchased</th>
+                      <th>
+                        Already returned
+                      </th>
+                      <th>Remaining</th>
+                      <th>Return qty</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {returnRows.map((r) => (
+                      <tr
+                        key={r.item.id}
+                      >
+                        <td>
+                          {r.item.products
+                            ?.name}
+                        </td>
+
+                        <td>
+                          {r.purchasedQty}
+                        </td>
+
+                        <td>
+                          {r.returned}
+                        </td>
+
+                        <td>
+                          {r.remaining}
+                        </td>
+
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            max={Math.floor(r.remaining)}
+                            step="1"
+                            inputMode="numeric"
+                            className="line-input line-input-sm"
+                            value={returnQtyMap[r.item.id] || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+
+                              // Allow clearing the field
+                              if (value === '') {
+                                setReturnQty(r.item.id, '');
+                                return;
+                              }
+
+                              const quantity = Number(value);
+                              const maximumQuantity = Math.floor(r.remaining);
+
+                              // Do not allow negative, decimal, or excessive quantities
+                              if (
+                                Number.isInteger(quantity) &&
+                                quantity >= 0 &&
+                                quantity <= maximumQuantity
+                              ) {
+                                setReturnQty(r.item.id, quantity);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              // Prevent decimal, negative, and scientific notation characters
+                              if (['.', '-', '+', 'e', 'E'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            disabled={r.remaining <= 0}
+                          />
+                        </td>
+
+                        <td>
+                          {
+                            business?.currency
+                          }{' '}
+                          {r.amount.toFixed(
+                            2
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="totals-summary">
+                  <div className="totals-grand">
+                    <span>
+                      Total credit
+                    </span>
+
+                    <span>
+                      {
+                        business?.currency
+                      }{' '}
+                      {returnTotal.toFixed(
+                        2
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {returnError && (
+                  <div
+                    className="error-text"
+                    style={{
+                      marginTop: 10,
+                    }}
+                  >
+                    {returnError}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'flex-end',
+                    gap: 10,
+                    marginTop: 16,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeReturn}
+                    disabled={
+                      returnSubmitting
+                    }
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={submitReturn}
+                    disabled={
+                      returnSubmitting
+                    }
+                  >
+                    {returnSubmitting
+                      ? 'Saving…'
+                      : 'Confirm return'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  );
+}

@@ -1,0 +1,83 @@
+/* ── PrintMenu ───────────────────────────────────────── */
+.print-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.print-menu-btn-group {
+  display: flex;
+  align-items: stretch;
+}
+
+.print-menu-trigger {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: none !important;
+}
+
+.print-menu-chevron {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  padding-left: 7px !important;
+  padding-right: 7px !important;
+  min-width: unset !important;
+}
+
+.print-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 230px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e0e3ef);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 999;
+  padding: 4px;
+  animation: printMenuFadeIn 0.1s ease;
+}
+
+@keyframes printMenuFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.print-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.print-menu-item:hover {
+  background: var(--bg-hover, #f3f4f8);
+}
+
+.print-menu-item-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.print-menu-item-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1d29);
+}
+
+.print-menu-item-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 1px;
+}
+
