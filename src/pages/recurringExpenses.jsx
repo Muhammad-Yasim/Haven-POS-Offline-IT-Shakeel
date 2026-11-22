@@ -85,15 +85,14 @@ export default function RecurringExpenses() {
       <div className="card list-panel">
         <table className="data-table">
           <thead>
-            <tr><th>Category</th><th>Location</th><th>Amount</th><th>Frequency</th><th>Next due</th><th>Status</th><th></th></tr>
+            <tr><th>Category</th><th>Amount</th><th>Frequency</th><th>Next due</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={7} className="muted table-empty">Loading…</td></tr>}
-            {!loading && rows.length === 0 && <tr><td colSpan={7} className="muted table-empty">No recurring templates yet.</td></tr>}
+            {loading && <tr><td colSpan={6} className="muted table-empty">Loading…</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan={6} className="muted table-empty">No recurring templates yet.</td></tr>}
             {!loading && rows.map((r) => (
               <tr key={r.id}>
                 <td>{categories[r.category_id] || '—'}</td>
-                <td>{locations[r.location_id] || '—'}</td>
                 <td>{business?.currency} {Number(r.amount).toFixed(2)}</td>
                 <td style={{ textTransform: 'capitalize' }}>{r.frequency}</td>
                 <td>

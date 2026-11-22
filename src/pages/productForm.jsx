@@ -313,8 +313,8 @@ export default function ProductForm() {
       const activeLocIds = selectedLocations.length > 0
         ? selectedLocations
         : locations.length > 0
-        ? [locations[0].id]
-        : [1];
+          ? [locations[0].id]
+          : [1];
 
       const payload = {
         name: productName,
@@ -425,9 +425,9 @@ export default function ProductForm() {
       <div className="compact-page-header">
         <div>
           <h1>{isEdit ? 'Edit Product' : 'Add New Product'}</h1>
-          <p>
+          {/* <p>
             Configure product catalog details, automatic SKU, tax & margin calculations, and inventory locations.
-          </p>
+          </p> */}
         </div>
 
         <div className="compact-header-actions">
@@ -513,7 +513,7 @@ export default function ProductForm() {
                   value={form.category_id}
                   onChange={update('category_id')}
                 >
-                  <option value="">— Uncategorized —</option>
+                  <option value="">Uncategorized </option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -522,7 +522,7 @@ export default function ProductForm() {
                 </select>
               </div>
 
-              <div className="compact-field">
+              {/* <div className="compact-field">
                 <label className="compact-label">Barcode Type</label>
                 <select
                   className="compact-select"
@@ -536,10 +536,10 @@ export default function ProductForm() {
                     </option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               <div className="compact-field">
-                <label className="compact-label">Barcode Digits / Code</label>
+                <label className="compact-label">Barcode</label>
                 <input
                   className="compact-input"
                   value={form.barcode_number}
@@ -554,7 +554,7 @@ export default function ProductForm() {
                   type="number"
                   min="0"
                   step="1"
-                  className="compact-input num-align"
+                  className="compact-input "
                   value={form.alert_quantity}
                   onChange={update('alert_quantity')}
                   placeholder="e.g. 5"
@@ -583,12 +583,11 @@ export default function ProductForm() {
                 />
               </div> */}
 
-              <div className="compact-field">
+              {/* <div className="compact-field">
                 <label className="compact-label">Sales Restriction</label>
                 <label
-                  className={`compact-toggle-field ${
-                    form.not_for_selling ? 'is-active' : ''
-                  }`}
+                  className={`compact-toggle-field ${form.not_for_selling ? 'is-active' : ''
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -597,7 +596,7 @@ export default function ProductForm() {
                   />
                   <span>Not for Selling</span>
                 </label>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -620,12 +619,12 @@ export default function ProductForm() {
                     </label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       min="0"
-                      className="compact-input num-align"
+                      className="compact-input "
                       value={form.cost_price}
                       onChange={handleCostPriceChange}
-                      placeholder="0.00"
+                      placeholder="0"
                       required
                     />
                   </div>
@@ -634,9 +633,9 @@ export default function ProductForm() {
                     <label className="compact-label">Profit Margin %</label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       min="0"
-                      className="compact-input num-align"
+                      className="compact-input"
                       value={form.profit_margin || ''}
                       onChange={handleProfitMarginChange}
                       placeholder="Target %"
@@ -649,12 +648,12 @@ export default function ProductForm() {
                     </label>
                     <input
                       type="number"
-                      step="0.01"
+                      step="1"
                       min="0"
-                      className="compact-input num-align"
+                      className="compact-input"
                       value={form.default_selling_price}
                       onChange={handleSellingPriceChange}
-                      placeholder="0.00"
+                      placeholder="0"
                       required
                     />
                   </div>
@@ -690,7 +689,7 @@ export default function ProductForm() {
                     </select>
                   </div> */}
 
-                  <div className="compact-field">
+                  {/* <div className="compact-field">
                     <label className="compact-label">Warranty Information</label>
                     <input
                       className="compact-input"
@@ -698,14 +697,13 @@ export default function ProductForm() {
                       onChange={update('warranty_info')}
                       placeholder="e.g. 1 Year Official"
                     />
-                  </div>
+                  </div> */}
 
                   <div className="compact-field col-span-3">
                     <label className="compact-label">Product Status</label>
                     <label
-                      className={`compact-toggle-field ${
-                        form.is_active ? 'is-active' : ''
-                      }`}
+                      className={`compact-toggle-field ${form.is_active ? 'is-active' : ''
+                        }`}
                     >
                       <input
                         type="checkbox"

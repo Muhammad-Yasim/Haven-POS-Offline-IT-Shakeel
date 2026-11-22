@@ -61,9 +61,7 @@ export default function ExpenseViewDrawer({
                 {categories[expense.category_id] || '—'}
               </DetailItem>
 
-              <DetailItem label="Business location">
-                {locations[expense.location_id] || '—'}
-              </DetailItem>
+
 
               <DetailItem label="Expense date">
                 {expense.expense_date || '—'}

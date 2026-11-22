@@ -151,6 +151,14 @@ export default function App() {
         }
       />
       <Route
+        path="/purchase-due"
+        element={
+          <ProtectedRoute module="purchases" action="view">
+            <PurchaseDue />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/purchases/new"
         element={
           <ProtectedRoute module="purchases" action="create">
@@ -185,6 +193,14 @@ export default function App() {
       />
       <Route
         path="/sales/due"
+        element={
+          <ProtectedRoute module="sales" action="view">
+            <SalesDue />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sales-due"
         element={
           <ProtectedRoute module="sales" action="view">
             <SalesDue />
@@ -387,7 +403,8 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route
+      {/* Location module routes disabled per single location setup */}
+      {/* <Route
         path="/settings/locations"
         element={
           <ProtectedRoute module="settings" action="view">
@@ -410,7 +427,7 @@ export default function App() {
             <LocationForm />
           </ProtectedRoute>
         }
-      />
+      /> */}
       <Route
         path="/settings/invoice"
         element={

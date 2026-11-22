@@ -96,16 +96,15 @@ export default function Header({ onMenuClick }) {
         <div className="header-business">
           <span className="header-business-name">
             Welcome, {profile?.first_name || 'User'} {profile?.last_name || ''}
-            {userLocationName ? ` (${userLocationName})` : ''}
           </span>
           <span className="header-datetime muted">{dateStr} · {timeStr}</span>
         </div>
       </div>
 
       <div className="app-header-right">
-        <button className="header-pos-btn" onClick={() => navigate('/pos')}>
+        {/* <button className="header-pos-btn" onClick={() => navigate('/pos')}>
           🧾 POS
-        </button>
+        </button> */}
 
         <div className="header-item" ref={notifRef}>
           <button className="icon-btn" onClick={toggleNotifPanel} aria-label="Notifications">

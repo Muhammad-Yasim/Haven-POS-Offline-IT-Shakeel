@@ -65,8 +65,7 @@ export default function ReportFilters({
 
   const chips = [];
   if (showDateRange) chips.push({ key: 'period', label: periodLabel() });
-  const locLabel = locationLabel();
-  if (locLabel) chips.push({ key: 'location', label: locLabel });
+  // Location chip removed per single-location setup
   extraFilters.forEach((f) => {
     const opt = f.options.find((o) => String(o.value) === String(f.value));
     if (opt && opt.value !== '' && opt.value !== 'all') {
@@ -115,22 +114,7 @@ export default function ReportFilters({
           </div>
         )}
 
-        {locations && (
-          <div className="filter-field">
-            <label className="filter-field-label" htmlFor="filter-location">Location</label>
-            <select
-              id="filter-location"
-              className="filter-select"
-              value={locationId}
-              onChange={(e) => onLocationChange(e.target.value)}
-            >
-              <option value="">All locations</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Location filter removed per single-location setup */}
 
         {extraFilters.map((f) => (
           <div className="filter-field" key={f.key}>

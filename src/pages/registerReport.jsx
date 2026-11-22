@@ -132,7 +132,7 @@ export default function RegisterReport({
         <div className="page-header no-print">
           <div>
             <h1>Register Report — #{register.id}</h1>
-            <p className="muted">{locationName} · {userName}</p>
+            <p className="muted">{userName}</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {canClose && (
@@ -165,7 +165,7 @@ export default function RegisterReport({
 
         {/* Screen-only summary cards */}
         <div className="card no-print" style={{ padding: 20, marginBottom: 16 }}>
-          <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             <div className="summary-card">
               <div className="summary-card-label">Opened</div>
               <div className="summary-card-value" style={{ fontSize: 15 }}>
@@ -181,10 +181,6 @@ export default function RegisterReport({
             <div className="summary-card">
               <div className="summary-card-label">User</div>
               <div className="summary-card-value" style={{ fontSize: 15 }}>{userName}</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-card-label">Location</div>
-              <div className="summary-card-value" style={{ fontSize: 15 }}>{locationName}</div>
             </div>
           </div>
         </div>

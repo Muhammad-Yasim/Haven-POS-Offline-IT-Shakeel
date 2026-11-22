@@ -58,15 +58,16 @@ export default function RecurringExpenseForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.location_id || !form.category_id || !form.amount || !form.next_due_date) {
-      setError('Location, category, amount, and next due date are required.');
+    const locId = form.location_id || locations[0]?.id || 1;
+    if (!form.category_id || !form.amount || !form.next_due_date) {
+      setError('Category, amount, and next due date are required.');
       return;
     }
     setSubmitting(true);
     try {
       const payload = {
         business_id: business.id,
-        location_id: form.location_id,
+        location_id: locId,
         category_id: form.category_id,
         amount: Number(form.amount),
         frequency: form.frequency,
@@ -104,12 +105,7 @@ export default function RecurringExpenseForm() {
         <section className="card form-section">
           <h2>Details</h2>
           <div className="form-grid">
-            <div className="field"><label>Location *</label>
-              <select value={form.location_id} onChange={update('location_id')} required>
-                <option value="">Select…</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </div>
+
             <div className="field"><label>Category *</label>
               <select value={form.category_id} onChange={update('category_id')} required>
                 <option value="">Select…</option>

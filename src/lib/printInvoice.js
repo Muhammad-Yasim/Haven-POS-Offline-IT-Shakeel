@@ -671,7 +671,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
 <body>
   <div class="receipt-page">
     <div class="header-banner">
-      <img src="${INVOICE_HEADER_DATA_URL}" alt="Earth iT Center" />
+      <img src="${INVOICE_HEADER_DATA_URL}" alt="Shahzad Computers & Security" />
     </div>
 
     <div class="doc-title">${esc(documentType || 'SALE ORDER')}</div>

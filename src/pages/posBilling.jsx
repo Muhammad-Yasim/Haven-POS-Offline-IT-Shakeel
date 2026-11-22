@@ -1850,39 +1850,7 @@ export default function PosBilling() {
             ←
           </Link>
 
-          <div className="pos-toolbar-location">
-            <span className="muted">
-              Location:
-            </span>
-
-            {locations.length > 1 && !register ? (
-              <select
-                value={locationId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setLocationId(val);
-                  if (prefLocationKey && val) {
-                    localStorage.setItem(prefLocationKey, String(val));
-                  }
-                  resetRegister();
-                }}
-              >
-                {locations.map((l) => (
-                  <option
-                    key={l.id}
-                    value={l.id}
-                  >
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <strong title={register ? 'Locked while your register is open' : undefined}>
-                {currentLocationName}
-                {register && ' 🔒'}
-              </strong>
-            )}
-          </div>
+          {/* Location selector hidden per single-location setup */}
 
           <div className="pos-toolbar-clock">
             🕐 {dateStr} {timeStr}

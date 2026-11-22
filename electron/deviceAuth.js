@@ -21,9 +21,9 @@ const os = require('os');
  * or the Windows MachineGuid / UUID.
  */
 const AUTHORIZED_DEVICE_IDS = [
-  '5404F72A-C185-4F8A-96C8-B3BA6E8424FB', // ahtsham pc device id
-  // '4D065250-0985-4642-AA12-4F5F745050BD', // computer 1 device id
-  // '3E8CA5AA-E08D-4D75-8DFE-E311EBC6E7C8', // auto parts 1 pc device id
+  // '5404F72A-C185-4F8A-96C8-B3BA6E8424FB', // ahtsham pc device id
+  '443C68AF-5821-4649-A374-CB0DA8AB754F',   //Yasim
+  '3E96A096-7ECE-4987-9E7C-D0785742989B',   //IT shakeel
 ];
 
 /**

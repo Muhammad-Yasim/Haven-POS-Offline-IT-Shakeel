@@ -707,22 +707,7 @@ export default function StockReport() {
             {/* Filters Bar */}
             <div className="stock-rep-filters no-print">
               {/* Location Select — owners only */}
-              {isOwner && (
-                <div className="stock-filter-group">
-                  <label htmlFor="filter-loc">Location</label>
-                  <select
-                    id="filter-loc"
-                    className="stock-select-input"
-                    value={locationFilter}
-                    onChange={(e) => setLocationFilter(e.target.value)}
-                  >
-                    <option value="">All Locations</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+
 
               {/* Category Select */}
               <div className="stock-filter-group">
@@ -906,18 +891,7 @@ export default function StockReport() {
               </div>
 
               <div className="stock-rep-filters no-print" style={{ margin: 0, padding: '6px 12px', border: '1px solid var(--border-light)' }}>
-                <div className="stock-filter-group" style={{ minWidth: '150px' }}>
-                  <select
-                    className="stock-select-input"
-                    value={historyLocationFilter}
-                    onChange={(e) => setHistoryLocationFilter(e.target.value)}
-                  >
-                    <option value="">All Locations</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
+
                 <button className="btn btn-secondary btn-sm" onClick={() => window.print()} style={{ marginRight: '8px' }}>
                   🖨️ Print
                 </button>
@@ -984,7 +958,6 @@ export default function StockReport() {
                   <thead>
                     <tr>
                       <th>Date &amp; Time</th>
-                      <th>Location</th>
                       <th>Transaction Type</th>
                       <th>Quantity Change</th>
                       <th>Reference Number</th>
@@ -994,12 +967,12 @@ export default function StockReport() {
                   <tbody>
                     {historyLoading && (
                       <tr>
-                        <td colSpan={6} className="muted table-empty">Loading history logs…</td>
+                        <td colSpan={5} className="muted table-empty">Loading history logs…</td>
                       </tr>
                     )}
                     {!historyLoading && computedHistoryLogs.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="muted table-empty">No transaction log entries.</td>
+                        <td colSpan={5} className="muted table-empty">No transaction log entries.</td>
                       </tr>
                     )}
                     {!historyLoading && paginatedHistoryLogs.map((log) => {
@@ -1040,7 +1013,6 @@ export default function StockReport() {
                       return (
                         <tr key={log.id}>
                           <td>{log.created_at ? formatTimestamp(log.created_at, business?.time_zone) : '—'}</td>
-                          <td>{locations.find(l => l.id === log.location_id)?.name || '—'}</td>
                           <td>
                             <span style={{ fontWeight: 600 }}>{typeLabel}</span>
                           </td>

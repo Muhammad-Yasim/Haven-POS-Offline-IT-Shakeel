@@ -327,7 +327,7 @@ export default function Products() {
 
           <div style={{ flex: '1 1 220px', minWidth: 0 }}>
             <DataSearchBar
-              placeholder="Search by name or SKU"
+              placeholder="Search by name"
               query={searchQuery}
               setQuery={setSearchQuery}
               clearSearch={() => { setSearchQuery(''); setCurrentPage(1); }}
@@ -347,7 +347,7 @@ export default function Products() {
             Categories
           </Link>
 
-          <Link
+          {/* <Link
             to="/tax-rates"
             className="btn btn-sm"
             style={{
@@ -358,7 +358,7 @@ export default function Products() {
             }}
           >
             Tax rates
-          </Link>
+          </Link> */}
 
           {/* Page-range picker */}
           {totalPages > 1 && (
@@ -716,7 +716,7 @@ export default function Products() {
             <thead>
               <tr>
                 <SortableHeader label="Product" sortKey="name" currentSortKey={sortKey} sortDirection={sortDirection} toggleSortKey={toggleSortKey} />
-                <SortableHeader label="SKU" sortKey="sku" currentSortKey={sortKey} sortDirection={sortDirection} toggleSortKey={toggleSortKey} />
+                {/* <SortableHeader label="SKU" sortKey="sku" currentSortKey={sortKey} sortDirection={sortDirection} toggleSortKey={toggleSortKey} /> */}
                 <SortableHeader label="Current stock" sortKey="current_stock" currentSortKey={sortKey} sortDirection={sortDirection} toggleSortKey={toggleSortKey} />
                 <SortableHeader label="Alert quantity" sortKey="alert_quantity" currentSortKey={sortKey} sortDirection={sortDirection} toggleSortKey={toggleSortKey} />
                 <SortableHeader label="Category" sortKey="category" currentSortKey={sortKey} sortDirection={sortDirection} toggleSortKey={toggleSortKey} />
@@ -742,7 +742,7 @@ export default function Products() {
                 return (
                   <tr key={p.id}>
                     <td>{p.name}</td>
-                    <td>{p.sku}</td>
+                    {/* <td>{p.sku}</td> */}
                     <td><span className={isLowStock ? 'badge badge-danger' : ''}>{currentStock}</span></td>
                     <td>{p.alert_quantity !== null && p.alert_quantity !== undefined ? p.alert_quantity : '—'}</td>
                     <td>{categories[p.category_id] || '—'}</td>

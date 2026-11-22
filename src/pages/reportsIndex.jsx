@@ -6,10 +6,10 @@ const REPORTS = [
   // { to: '/registers', title: 'Register Reports', desc: 'Cash drawer open/close history and session summaries.', icon: '📠' },
   { to: '/reports/sales', title: 'Sales & Purchase', desc: 'Consolidated sales and purchase report with returns and dues — side by side.', icon: '💵' },
   { to: '/reports/profit-loss', title: 'Profit & Loss', desc: 'Revenue minus cost of goods sold and expenses.', icon: '📈' },
-  { to: '/reports/stock', title: 'Stock', desc: 'On-hand quantities and inventory value by location.', icon: '📊' },
+  { to: '/reports/stock', title: 'Stock', desc: 'On-hand quantities and inventory value.', icon: '📊' },
   { to: '/reports/customers', title: 'Customers', desc: 'Purchase activity and balances owed per customer.', icon: '👥' },
   { to: '/reports/suppliers', title: 'Suppliers', desc: 'Purchase activity and balances owed per supplier.', icon: '🚚' },
-  { to: '/reports/expenses', title: 'Expenses', desc: 'Spend broken down by category and location.', icon: '🧮' },
+  { to: '/reports/expenses', title: 'Expenses', desc: 'Spend broken down by category.', icon: '🧮' },
   // { to: '/reports/user-activity', title: 'User Activity', desc: 'Sales and purchases processed per staff member.', icon: '🔐' },
   { to: '/reports/daily-items', title: 'Daily Items', desc: 'Products sold and quantities for any date range — with PDF and print export.', icon: '📦' },
 ];

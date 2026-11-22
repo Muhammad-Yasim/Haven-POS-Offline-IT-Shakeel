@@ -100,7 +100,6 @@ export default function PurchasesReport() {
         filters={[
           { label: 'Status', value: statusFilter },
           { label: 'Period', value: `${range.from || 'Start'} to ${range.to || 'End'}` },
-          { label: 'Location', value: locations.find(l => String(l.id) === String(locationId))?.name || 'All Locations' },
         ]}
       />
 

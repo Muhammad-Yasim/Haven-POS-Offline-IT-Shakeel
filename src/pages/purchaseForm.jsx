@@ -8,6 +8,7 @@ import { api } from '../lib/electronAPI.js';
 import { notifyPaymentDueSupplier } from '../lib/notifications.js';
 import Loader from '../components/Loader.jsx';
 import useLocationScope from '../hooks/useLocationScope.js';
+import QuickAddContactModal from '../components/QuickAddContactModal.jsx';
 import './userForm.css';
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
@@ -28,6 +29,7 @@ export default function PurchaseForm() {
 
   const [locationId, setLocationId] = useState('');
   const [supplierId, setSupplierId] = useState('');
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [purchaseDate, setPurchaseDate] = useState(
     todayLocal(business?.time_zone)
   );
@@ -366,11 +368,11 @@ export default function PurchaseForm() {
 
       const sellingPriceUpdates = statusToSet === 'received'
         ? items
-            .filter((item) => item.product_id && Number(item.selling_price) > 0)
-            .map((item) => ({
-              product_id: Number(item.product_id),
-              selling_price: Number(item.selling_price),
-            }))
+          .filter((item) => item.product_id && Number(item.selling_price) > 0)
+          .map((item) => ({
+            product_id: Number(item.product_id),
+            selling_price: Number(item.selling_price),
+          }))
         : [];
 
       const originalStatus = originalPurchase?.purchase_status || 'draft';
@@ -508,22 +510,21 @@ export default function PurchaseForm() {
             {isEditMode ? `Edit Purchase #${purchaseId}` : 'New Purchase'}
             {isEditMode && originalPurchase?.purchase_status && (
               <span
-                className={`badge ${
-                  originalPurchase.purchase_status === 'received'
-                    ? 'badge-success'
-                    : 'badge-warning'
-                }`}
+                className={`badge ${originalPurchase.purchase_status === 'received'
+                  ? 'badge-success'
+                  : 'badge-warning'
+                  }`}
                 style={{ fontSize: 11, padding: '2px 8px', textTransform: 'capitalize' }}
               >
                 {originalPurchase.purchase_status}
               </span>
             )}
           </h1>
-          <p>
+          {/* <p>
             {isEditMode
               ? 'Update purchase details, inbound costs, and supplier payments.'
               : 'Save as a draft or mark as received to add incoming inventory to stock.'}
-          </p>
+          </p> */}
         </div>
 
         <div className="compact-header-actions">
@@ -534,14 +535,14 @@ export default function PurchaseForm() {
           >
             Cancel
           </button>
-          <button
+          {/* <button
             type="button"
             className="btn btn-secondary btn-sm"
             disabled={submitting || loadingForm}
             onClick={() => save('draft')}
           >
             {isEditMode ? 'Update Draft' : 'Save as Draft'}
-          </button>
+          </button> */}
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -589,18 +590,44 @@ export default function PurchaseForm() {
 
                 <div className="compact-field">
                   <label className="compact-label">Supplier</label>
-                  <select
-                    className="compact-select"
-                    value={supplierId}
-                    onChange={(e) => setSupplierId(e.target.value)}
-                  >
-                    <option value="">Cash / Unspecified</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <select
+                      className="compact-select"
+                      style={{ flex: 1 }}
+                      value={supplierId}
+                      onChange={(e) => setSupplierId(e.target.value)}
+                    >
+                      <option value="">Cash / Unspecified</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      title="Add new supplier"
+                      onClick={() => setShowAddSupplier(true)}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        border: '1.5px solid var(--navy-border, #cbd5e1)',
+                        background: '#fff',
+                        color: 'var(--navy-800, #1e293b)',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        lineHeight: '1',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
 
                 <div className="compact-field">
@@ -659,9 +686,9 @@ export default function PurchaseForm() {
             {/* SETTLEMENT & INVOICING ACCOUNTING LEDGER */}
             <div className="form-section-compact">
               <div className="form-section-header">
-                <span className="form-section-title">Settlement & Payment Details</span>
+                <span className="form-section-title">Payment Details</span>
                 <span className="form-section-subtitle">
-                  Inbound charges, advance payments & ledger impact
+                  Payments & ledger impact
                 </span>
               </div>
 
@@ -700,20 +727,20 @@ export default function PurchaseForm() {
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
-                        className="compact-input num-align"
+                        step="10"
+                        className="compact-input"
                         value={shippingCharges}
                         onChange={(e) => setShippingCharges(e.target.value)}
                       />
                     </div>
 
                     <div className="compact-field">
-                      <label className="compact-label">Advance Payment</label>
+                      <label className="compact-label">Amount Paid</label>
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
-                        className="compact-input num-align"
+                        step="10"
+                        className="compact-input"
                         value={advancePayment}
                         onChange={(e) => setAdvancePayment(e.target.value)}
                       />
@@ -858,14 +885,14 @@ export default function PurchaseForm() {
                   Cancel
                 </button>
 
-                <button
+                {/* <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   disabled={submitting}
                   onClick={() => save('draft')}
                 >
                   {isEditMode ? 'Update Draft' : 'Save as Draft'}
-                </button>
+                </button> */}
 
                 <button
                   type="button"
@@ -880,6 +907,17 @@ export default function PurchaseForm() {
           </>
         )}
       </div>
+
+      <QuickAddContactModal
+        isOpen={showAddSupplier}
+        onClose={() => setShowAddSupplier(false)}
+        contactType="supplier"
+        businessId={business?.id}
+        onContactAdded={(newSupplier) => {
+          setSuppliers((prev) => [...prev, newSupplier]);
+          setSupplierId(String(newSupplier.id));
+        }}
+      />
     </AppLayout>
   );
 }

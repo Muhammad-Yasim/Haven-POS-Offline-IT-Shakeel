@@ -325,23 +325,7 @@ export default function CustomersReport() {
       <div className="cust-rep-container">
         {/* Filter bar */}
         <div className="cust-rep-filters no-print">
-          {/* Location Select Dropdown — owners only */}
-          {isOwner && (
-            <div className="cust-filter-group" style={{ maxWidth: '240px' }}>
-              <label htmlFor="filter-location">Filter by Location</label>
-              <select
-                id="filter-location"
-                className="cust-select-input"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              >
-                <option value="">All Locations</option>
-                {locations.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+
 
           {/* User Select Dropdown — owners only */}
           {isOwner && users.length > 0 && (

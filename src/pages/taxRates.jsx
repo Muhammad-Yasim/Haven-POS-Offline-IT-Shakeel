@@ -73,26 +73,26 @@ export default function TaxRates() {
       <div className="settings-card">
         <div className="settings-card-header">
           <form onSubmit={add} style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <input 
-              className="settings-input" 
-              placeholder="Tax name (e.g. GST)" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
+            <input
+              className="settings-input"
+              placeholder="Tax name (e.g. GST)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               style={{ maxWidth: '240px' }}
             />
-            <input 
-              className="settings-input" 
-              type="number" step="0.01" min="0" max="100" 
-              placeholder="Rate %" 
-              value={rate} 
-              onChange={(e) => setRate(e.target.value)} 
+            <input
+              className="settings-input"
+              type="number" step="0.01" min="0" max="100"
+              placeholder="Rate %"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
               style={{ maxWidth: '120px' }}
             />
             <button className="btn btn-primary" type="submit">Add Tax Rate</button>
           </form>
           {error && <div className="error-text" style={{ marginTop: '12px' }}>{error}</div>}
         </div>
-        
+
         <div style={{ overflowX: 'auto' }}>
           <table className="data-table">
             <thead>
@@ -113,11 +113,11 @@ export default function TaxRates() {
                   <td>{row.name}</td>
                   <td>
                     {editingId === row.id ? (
-                      <input 
-                        className="settings-input" 
-                        type="number" step="0.01" min="0" max="100" 
-                        value={editingRate} 
-                        onChange={(e) => setEditingRate(e.target.value)} 
+                      <input
+                        className="settings-input"
+                        type="number" step="0.01" min="0" max="100"
+                        value={editingRate}
+                        onChange={(e) => setEditingRate(e.target.value)}
                         style={{ width: '100px', padding: '6px' }}
                       />
                     ) : (

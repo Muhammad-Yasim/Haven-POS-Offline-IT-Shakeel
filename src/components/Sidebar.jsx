@@ -11,12 +11,12 @@ const NAV_ITEMS = [
     module: null,
     icon: 'dashboard',
   },
-  {
-    to: '/pos',
-    label: 'POS Billing',
-    module: 'pos',
-    icon: 'pos',
-  },
+  // {
+  //   to: '/pos', 
+  //   label: 'POS Billing',
+  //   module: 'pos',
+  //   icon: 'pos',
+  // },
   {
     to: '/contacts',
     label: 'Parties',
@@ -244,55 +244,55 @@ export default function Sidebar({ open, onClose }) {
         <nav className="sidebar-nav">
 
           {visibleItems.map((item) => {
-              const to =
-                item.to === '/settings'
-                  ? profile?.is_owner
-                    ? '/settings/business'
-                    : '/settings/preferences'
-                  : item.to;
+            const to =
+              item.to === '/settings'
+                ? profile?.is_owner
+                  ? '/settings/business'
+                  : '/settings/preferences'
+                : item.to;
 
-              return (
-                <NavLink
-                  key={item.to}
-                  to={to}
+            return (
+              <NavLink
+                key={item.to}
+                to={to}
 
-                  className={({ isActive }) => {
-                    const isSettingsActive =
-                      item.to === '/settings' &&
-                      location.pathname.startsWith('/settings');
-                    const isRegistersActive =
-                      item.to === '/active-register' &&
-                      location.pathname.startsWith('/registers');
+                className={({ isActive }) => {
+                  const isSettingsActive =
+                    item.to === '/settings' &&
+                    location.pathname.startsWith('/settings');
+                  const isRegistersActive =
+                    item.to === '/active-register' &&
+                    location.pathname.startsWith('/registers');
 
-                    return `sidebar-link ${isActive || isSettingsActive || isRegistersActive
-                        ? 'sidebar-link-active'
-                        : ''
-                      }`;
-                  }}
+                  return `sidebar-link ${isActive || isSettingsActive || isRegistersActive
+                    ? 'sidebar-link-active'
+                    : ''
+                    }`;
+                }}
 
-                  onClick={onClose}
+                onClick={onClose}
 
-                  title={
-                    collapsed
-                      ? item.label
-                      : undefined
-                  }
+                title={
+                  collapsed
+                    ? item.label
+                    : undefined
+                }
+              >
+
+                <span
+                  className="sidebar-link-icon"
+                  aria-hidden="true"
                 >
+                  <NavIcon name={item.icon} />
+                </span>
 
-                  <span
-                    className="sidebar-link-icon"
-                    aria-hidden="true"
-                  >
-                    <NavIcon name={item.icon} />
-                  </span>
+                <span className="sidebar-link-label">
+                  {item.label}
+                </span>
 
-                  <span className="sidebar-link-label">
-                    {item.label}
-                  </span>
-
-                </NavLink>
-              );
-            })}
+              </NavLink>
+            );
+          })}
 
         </nav>
 

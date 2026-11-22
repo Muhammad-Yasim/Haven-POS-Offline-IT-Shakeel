@@ -390,18 +390,7 @@ export default function Expenses() {
             ))}
           </select>
 
-          {isOwner && (
-            <select
-              className="filter-select"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-            >
-              <option value="">All locations</option>
-              {locationList.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          )}
+
 
           <select
             className="filter-select"
@@ -516,7 +505,7 @@ export default function Expenses() {
                 <th style={{ width: 90 }} className="no-print">Actions</th>
                 <th>Expense title</th>
                 <th>Category</th>
-                <th>Business location</th>
+
                 <th>Date</th>
                 <th>Payment method</th>
                 <th>Status</th>
@@ -565,7 +554,7 @@ export default function Expenses() {
                       {row.vendor && <div className="muted" style={{ fontSize: '11px' }}>{row.vendor}</div>}
                     </td>
                     <td>{categories[row.category_id] || '—'}</td>
-                    <td>{locations[row.location_id] || '—'}</td>
+
                     <td>{row.expense_date}</td>
                     <td>{row.payment_method ? row.payment_method.replace('_', ' ') : '—'}</td>
                     <td>

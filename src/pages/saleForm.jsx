@@ -13,6 +13,7 @@ import { getFifoCosts } from '../lib/fifoCost.js';
 import Loader from '../components/Loader.jsx';
 import './userForm.css';
 import useLocationScope from '../hooks/useLocationScope.js';
+import QuickAddContactModal from '../components/QuickAddContactModal.jsx';
 
 export default function SaleForm() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export default function SaleForm() {
 
   const [locationId, setLocationId] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [salesAgentId, setSalesAgentId] = useState('');
   const [saleDate, setSaleDate] = useState(
     todayLocal(business?.time_zone)
@@ -533,11 +535,10 @@ export default function SaleForm() {
             {isEditMode ? `Edit Sale #${editSaleId}` : 'New Sale'}
             {isEditMode && originalSale?.status && (
               <span
-                className={`badge ${
-                  originalSale.status === 'confirmed'
-                    ? 'badge-success'
-                    : 'badge-warning'
-                }`}
+                className={`badge ${originalSale.status === 'confirmed'
+                  ? 'badge-success'
+                  : 'badge-warning'
+                  }`}
                 style={{ fontSize: 11, padding: '2px 8px', textTransform: 'capitalize' }}
               >
                 {originalSale.status}
@@ -587,55 +588,65 @@ export default function SaleForm() {
           </div>
 
           <div className="form-grid-5">
-            <div className="compact-field">
-              <label className="compact-label">
-                Location <span className="req">*</span>
-              </label>
-              <select
-                className="compact-select"
-                value={locationId}
-                onChange={(e) => setLocationId(e.target.value)}
-              >
-                <option value="">Select location…</option>
-                {locations.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Location selector hidden per single-location setup */}
 
             <div className="compact-field">
               <label className="compact-label">Customer</label>
-              <select
-                className="compact-select"
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-              >
-                <option value="">Walk-in Customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <select
+                  className="compact-select"
+                  style={{ flex: 1 }}
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                >
+                  <option value="">Walk-in Customer</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  title="Add new customer"
+                  onClick={() => setShowAddCustomer(true)}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    border: '1.5px solid var(--navy-border, #cbd5e1)',
+                    background: '#fff',
+                    color: 'var(--navy-800, #1e293b)',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    lineHeight: '1',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  +
+                </button>
+              </div>
             </div>
 
-            <div className="compact-field">
+            {/* <div className="compact-field">
               <label className="compact-label">Sales Agent</label>
               <select
                 className="compact-select"
                 value={salesAgentId}
                 onChange={(e) => setSalesAgentId(e.target.value)}
               >
-                <option value="">— None —</option>
+                <option value="">None </option>
                 {agents.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.first_name} {a.last_name || ''}
                   </option>
                 ))}
               </select>
-            </div>
+            </div> */}
 
             <div className="compact-field">
               <label className="compact-label">Sale Date</label>
@@ -647,7 +658,7 @@ export default function SaleForm() {
               />
             </div>
 
-            <div className="compact-field">
+            {/* <div className="compact-field">
               <label className="compact-label">Pay Term</label>
               <input
                 className="compact-input"
@@ -655,7 +666,7 @@ export default function SaleForm() {
                 onChange={(e) => setPayTerm(e.target.value)}
                 placeholder="e.g. Due on receipt"
               />
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -682,7 +693,7 @@ export default function SaleForm() {
         {/* SETTLEMENT & ACCOUNTING LEDGER PANEL */}
         <div className="form-section-compact">
           <div className="form-section-header">
-            <span className="form-section-title">Payment & Accounting Settlement</span>
+            <span className="form-section-title">Payments </span>
             <span className="form-section-subtitle">
               Discounts, shipping & payment allocation
             </span>
@@ -709,8 +720,8 @@ export default function SaleForm() {
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
-                    className="compact-input num-align"
+                    step="1"
+                    className="compact-input"
                     value={discountAmount}
                     onChange={(e) => setDiscountAmount(e.target.value)}
                   />
@@ -721,8 +732,8 @@ export default function SaleForm() {
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
-                    className="compact-input num-align"
+                    step="1"
+                    className="compact-input "
                     value={shippingCharges}
                     onChange={(e) => setShippingCharges(e.target.value)}
                   />
@@ -733,8 +744,8 @@ export default function SaleForm() {
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
-                    className="compact-input num-align"
+                    step="100"
+                    className="compact-input"
                     value={paidAmount}
                     onChange={(e) => setPaidAmount(e.target.value)}
                   />
@@ -754,9 +765,8 @@ export default function SaleForm() {
                   <label className="compact-label">Payment Status</label>
                   <div style={{ display: 'flex', alignItems: 'center', height: 32 }}>
                     <span
-                      className={`badge ${
-                        totals.due > 0 ? 'badge-warning' : 'badge-success'
-                      }`}
+                      className={`badge ${totals.due > 0 ? 'badge-warning' : 'badge-success'
+                        }`}
                       style={{ fontSize: 11, padding: '3px 10px', textTransform: 'capitalize' }}
                     >
                       {totals.due > 0 ? `Due: ${business?.currency} ${totals.due.toFixed(2)}` : 'Fully Paid'}
@@ -882,23 +892,23 @@ export default function SaleForm() {
               Cancel
             </button>
 
-            <button
+            {/* <button
               type="button"
               className="btn btn-secondary btn-sm"
               disabled={submitting}
               onClick={() => save('draft')}
             >
               {isEditMode ? 'Update Draft' : 'Save as Draft'}
-            </button>
+            </button> */}
 
-            <button
+            {/* <button
               type="button"
               className="btn btn-secondary btn-sm"
               disabled={submitting}
               onClick={() => save('quotation')}
             >
               {isEditMode ? 'Update Quotation' : 'Save as Quotation'}
-            </button>
+            </button> */}
 
             <button
               type="button"
@@ -911,6 +921,17 @@ export default function SaleForm() {
           </div>
         </div>
       </div>
+
+      <QuickAddContactModal
+        isOpen={showAddCustomer}
+        onClose={() => setShowAddCustomer(false)}
+        contactType="customer"
+        businessId={business?.id}
+        onContactAdded={(newCustomer) => {
+          setCustomers((prev) => [...prev, newCustomer]);
+          setCustomerId(String(newCustomer.id));
+        }}
+      />
     </AppLayout>
   );
 }

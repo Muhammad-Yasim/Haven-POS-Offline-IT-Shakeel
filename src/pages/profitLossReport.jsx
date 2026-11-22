@@ -858,10 +858,6 @@ return (
               ? `${range.from || 'Start'} to ${range.to || 'End'}`
               : (PRESETS.find(p => p.key === activePreset)?.label || activePreset),
           },
-          {
-            label: 'Location',
-            value: locations.find(l => String(l.id) === String(locationId))?.name || 'All Locations',
-          },
         ]}
       />
 
@@ -905,22 +901,7 @@ return (
             </div>
           )}
 
-          {isOwner && (
-            <div className="pl-filter-item">
-              <label htmlFor="pl-loc">Location</label>
-              <select
-                id="pl-loc"
-                className="pl-select-input"
-                value={locationId}
-                onChange={(e) => setLocationId(e.target.value)}
-              >
-                <option value="">All locations</option>
-                {locations.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+
 
           <div className="pl-filter-item">
             <button
@@ -1085,7 +1066,6 @@ return (
                   { id: 'products', label: 'Profit by Products' },
                   { id: 'categories', label: 'Profit by Categories' },
                   { id: 'brands', label: 'Profit by Brands' },
-                  { id: 'locations', label: 'Profit by Location' },
                   { id: 'invoices', label: 'Profit by Invoice' },
                   { id: 'dates', label: 'Profit by Date' },
                   { id: 'customers', label: 'Profit by Customer' },
@@ -1108,7 +1088,6 @@ return (
                   { id: 'products', label: 'Profit by Products' },
                   { id: 'categories', label: 'Profit by Categories' },
                   { id: 'brands', label: 'Profit by Brands' },
-                  { id: 'locations', label: 'Profit by Location' },
                   { id: 'invoices', label: 'Profit by Invoice' },
                   { id: 'dates', label: 'Profit by Date' },
                   { id: 'customers', label: 'Profit by Customer' },

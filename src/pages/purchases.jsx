@@ -717,7 +717,7 @@ export default function Purchases() {
             className="btn btn-sm"
             style={{ whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)' }}
             onClick={() => window.print()}
-          > 
+          >
             🖨 Print
           </button>
           <button
@@ -867,16 +867,16 @@ export default function Purchases() {
                   toggleSortKey={sort.toggleSortKey}
                 />
 
-                {/* Payment Status header removed
-                <SortableHeader
+                {/* Payment Status header removed */}
+                {/* <SortableHeader
                   className="no-print"
                   label="Payment Status"
                   sortKey="payment_status"
                   currentSortKey={sort.sortKey}
                   sortDirection={sort.sortDirection}
                   toggleSortKey={sort.toggleSortKey}
-                />
-                */}
+                /> */}
+
 
                 <SortableHeader
                   label="Added By"

@@ -242,10 +242,6 @@ export default function SalesPurchasesReport() {
                 ? `${range.from || 'Start'} to ${range.to || 'End'}`
                 : (PRESETS.find(p => p.key === activePreset)?.label || activePreset),
             },
-            {
-              label: 'Location',
-              value: locations.find(l => String(l.id) === String(locationId))?.name || 'All Locations',
-            },
           ]}
         />
         {/* ── Toolbar ── */}
@@ -291,23 +287,7 @@ export default function SalesPurchasesReport() {
               </div>
             )}
 
-            {/* Location filter — owners only */}
-            {isOwner && locations.length > 0 && (
-              <div className="sr-filter-item">
-                <label htmlFor="sr-loc">Location</label>
-                <select
-                  id="sr-loc"
-                  className="sr-select"
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                >
-                  <option value="">All locations</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+
           </div>
 
           <div className="sr-toolbar-right">

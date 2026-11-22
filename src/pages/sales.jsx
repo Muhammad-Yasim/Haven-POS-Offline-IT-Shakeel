@@ -715,18 +715,7 @@ export default function Sales() {
             <option value="due">Due</option>
           </select>
 
-          {isOwner && (
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">All locations</option>
-              {locationOptions.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          )}
+
 
           <input
             type="date"
@@ -790,7 +779,7 @@ export default function Sales() {
                 <SortableHeader label="Due " sortKey="due_amount" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
                 <SortableHeader label="Payment Status" sortKey="payment_status" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
                 <SortableHeader label="Status" sortKey="status" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
-                <SortableHeader label="Location" sortKey="location" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
+
                 <SortableHeader label="Time" sortKey="created_at" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
                 <SortableHeader label=" Method" sortKey="payment_method" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
                 <SortableHeader label="Added By" sortKey="added_by" currentSortKey={sort.sortKey} sortDirection={sort.sortDirection} toggleSortKey={sort.toggleSortKey} />
@@ -927,10 +916,7 @@ export default function Sales() {
                             {s.status ? s.status.replace('_', ' ') : '—'}
                           </span>
                         </td>
-                        {/* Location */}
-                        <td>
-                          {locations[s.location_id] || '—'}
-                        </td>
+
                         {/* Time */}
                         <td>
                           {s.created_at ? formatTimestamp(s.created_at, business?.time_zone) : '—'}

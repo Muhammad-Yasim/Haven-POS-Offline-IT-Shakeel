@@ -4,8 +4,9 @@ import { formatNow } from '../lib/timezone.js';
 import { INVOICE_HEADER_DATA_URL } from '../lib/invoiceAssets.js';
 
 /**
+ * 
  * PrintReportHeader — visible when printing OR when .pdf-export-mode is active.
- * Renders the standardized Shahzad Computers & Security receipt-style header.
+ * Renders the standardized Earth iT Center receipt-style header.
  *
  * Props:
  *   title       {string}  — Report title e.g. "Profit & Loss Report"
@@ -40,7 +41,7 @@ export default function PrintReportHeader({ title, filters = [], location, filte
     <div className="prh-root">
       {/* ── Top receipt-style banner ── */}
       <div className="prh-header-banner">
-        <img src={INVOICE_HEADER_DATA_URL} alt="Shahzad Computers & Security" />
+        <img src={INVOICE_HEADER_DATA_URL} alt="Earth iT Center" />
       </div>
 
       {/* ── Centered Report Title (same style as SALE ORDER) ── */}

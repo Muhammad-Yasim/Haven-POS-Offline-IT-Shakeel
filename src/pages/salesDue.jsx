@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import AppLayout from '../components/AppLayout.jsx';
 import Pagination from '../components/Pagination.jsx';
@@ -16,6 +16,7 @@ import { api } from '../lib/electronAPI.js';
 export default function SalesDue() {
   const { business, profile, can } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,8 +37,16 @@ export default function SalesDue() {
   const [invoiceFilter, setInvoiceFilter] =
     useState('');
 
+  const initialCustomer = searchParams.get('customer') || searchParams.get('contact') || '';
   const [customerFilter, setCustomerFilter] =
-    useState('');
+    useState(initialCustomer);
+
+  useEffect(() => {
+    const paramCustomer = searchParams.get('customer') || searchParams.get('contact');
+    if (paramCustomer) {
+      setCustomerFilter(paramCustomer);
+    }
+  }, [searchParams]);
 
   const [locationFilter, setLocationFilter] =
     useState('');
@@ -115,7 +124,7 @@ export default function SalesDue() {
   }, [rows]);
 
   const customerOptions = useMemo(() => {
-    return [
+    const list = [
       ...new Set(
         rows
           .map(
@@ -126,7 +135,11 @@ export default function SalesDue() {
           .filter(Boolean)
       ),
     ];
-  }, [rows]);
+    if (customerFilter && !list.includes(customerFilter)) {
+      list.unshift(customerFilter);
+    }
+    return list;
+  }, [rows, customerFilter]);
 
   const locationOptions = useMemo(() => {
     return [
@@ -164,7 +177,9 @@ export default function SalesDue() {
 
       const matchesCustomer =
         !customerFilter ||
-        customer === customerFilter;
+        customer.toLowerCase() === customerFilter.toLowerCase() ||
+        customer.toLowerCase().includes(customerFilter.toLowerCase()) ||
+        String(row.customer_id) === customerFilter;
 
       const matchesLocation =
         !locationFilter ||
@@ -494,30 +509,7 @@ export default function SalesDue() {
             ))}
           </select>
 
-          {/* LOCATION FILTER */}
 
-          <select
-            className="data-sort-select"
-            value={locationFilter}
-            onChange={(e) =>
-              setLocationFilter(
-                e.target.value
-              )
-            }
-          >
-            <option value="">
-              All locations
-            </option>
-
-            {locationOptions.map((location) => (
-              <option
-                key={location}
-                value={location}
-              >
-                {location}
-              </option>
-            ))}
-          </select>
         </div>
 
         <table className="data-table">
@@ -539,13 +531,7 @@ export default function SalesDue() {
                 toggleSortKey={sort.toggleSortKey}
               />
 
-              <SortableHeader
-                label="Location"
-                sortKey="location"
-                currentSortKey={sort.sortKey}
-                sortDirection={sort.sortDirection}
-                toggleSortKey={sort.toggleSortKey}
-              />
+
 
               <SortableHeader
                 label="Date"
@@ -622,10 +608,7 @@ export default function SalesDue() {
                       'Walk-in'}
                   </td>
 
-                  <td>
-                    {r.locations?.name ||
-                      '—'}
-                  </td>
+
 
                   <td>
                     {r.sale_date}

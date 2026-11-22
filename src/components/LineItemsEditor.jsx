@@ -51,9 +51,9 @@ export function computeLine(
   const taxRate =
     item.tax_id
       ? Number(
-          taxRatesById[item.tax_id]
-            ?.rate_percentage || 0
-        )
+        taxRatesById[item.tax_id]
+          ?.rate_percentage || 0
+      )
       : 0;
 
   const product =
@@ -72,7 +72,7 @@ export function computeLine(
     taxAmount =
       net -
       net /
-        (1 + taxRate / 100);
+      (1 + taxRate / 100);
 
     lineTotal =
       net;
@@ -117,7 +117,7 @@ function calculateUnitPriceBeforeTax(
   ) {
     return Math.max(
       price -
-        (price * discount) / 100,
+      (price * discount) / 100,
       0
     );
   }
@@ -531,9 +531,9 @@ export default function LineItemsEditor({
         (it, i) =>
           i === idx
             ? {
-                ...it,
-                ...patch,
-              }
+              ...it,
+              ...patch,
+            }
             : it
       )
     );
@@ -712,7 +712,7 @@ export default function LineItemsEditor({
           {isDropdownOpen && (
             <div className="product-search-dropdown" ref={dropdownRef}>
               {displayedProducts.length ===
-              0 ? (
+                0 ? (
                 <div className="product-search-empty">
                   No products found.
                 </div>
@@ -722,14 +722,14 @@ export default function LineItemsEditor({
                     const availableQty =
                       Number(
                         stockMap[
-                          p.id
+                        p.id
                         ] || 0
                       );
 
                     const isDisabled =
                       isSale &&
                       availableQty <=
-                        0;
+                      0;
 
                     return (
                       <div
@@ -740,7 +740,7 @@ export default function LineItemsEditor({
                             ? ' disabled'
                             : '') +
                           (i ===
-                          highlightedIndex
+                            highlightedIndex
                             ? ' highlighted'
                             : '')
                         }
@@ -919,7 +919,7 @@ export default function LineItemsEditor({
 
                   const product =
                     productsById[
-                      item.product_id
+                    item.product_id
                     ];
 
 
@@ -927,7 +927,7 @@ export default function LineItemsEditor({
                   const availableQty =
                     Number(
                       stockMap[
-                        item.product_id
+                      item.product_id
                       ] || 0
                     );
 
@@ -1023,7 +1023,7 @@ export default function LineItemsEditor({
                             if (
                               isSale &&
                               Number(value) >
-                                availableQty
+                              availableQty
                             ) {
                               return;
                             }
@@ -1052,7 +1052,7 @@ export default function LineItemsEditor({
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="1"
                           className="line-input line-input-sm"
                           value={
                             item.unit_price
@@ -1131,7 +1131,7 @@ export default function LineItemsEditor({
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="line-input line-input-sm"
                             value={
                               item.discount_amount
@@ -1164,7 +1164,7 @@ export default function LineItemsEditor({
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="line-input line-input-sm"
                             value={
                               item.unit_price_before_tax
@@ -1187,7 +1187,7 @@ export default function LineItemsEditor({
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="line-input line-input-sm"
                             value={
                               item.profit_margin
@@ -1215,7 +1215,7 @@ export default function LineItemsEditor({
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="line-input line-input-sm"
                             value={
                               item.selling_price
@@ -1275,7 +1275,7 @@ export default function LineItemsEditor({
                           <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="1"
                             className="line-input line-input-sm"
                             value={
                               item.discount_amount

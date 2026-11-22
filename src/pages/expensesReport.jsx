@@ -275,21 +275,7 @@ export default function ExpensesReport() {
           </div>
 
           <div className="sr-toolbar-right">
-            {isOwner && (
-              <div className="sr-filter-item">
-                <label>Location</label>
-                <select
-                  className="sr-select"
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                >
-                  <option value="">All Locations</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+
             <button className="btn btn-primary" onClick={handlePrint} style={{ marginRight: '8px' }}>🖨️ Print</button>
             <button className="btn btn-primary" onClick={() => {
               const period = activePreset === 'custom'
@@ -311,10 +297,7 @@ export default function ExpensesReport() {
                 ? `${range.from || 'Start'} to ${range.to || 'End'}`
                 : (DASHBOARD_PRESETS.find(p => p.key === activePreset)?.label || activePreset),
             },
-            {
-              label: 'Location',
-              value: locationId ? (locationNames[locationId] || 'Unknown') : 'All Locations',
-            },
+
           ]}
         />
 

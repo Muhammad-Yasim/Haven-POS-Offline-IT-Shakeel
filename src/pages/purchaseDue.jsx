@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout.jsx';
 import Pagination from '../components/Pagination.jsx';
 import DataSearchBar from '../components/DataSearchBar.jsx';
@@ -13,6 +13,7 @@ import { api } from '../lib/electronAPI.js';
 export default function PurchaseDue() {
   const { business, profile, can } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +29,17 @@ export default function PurchaseDue() {
     useState(false);
 
   // Filters
+  const initialSupplier = searchParams.get('supplier') || searchParams.get('contact') || '';
   const [supplierFilter, setSupplierFilter] =
-    useState('');
+    useState(initialSupplier);
+
+  useEffect(() => {
+    const paramSupplier = searchParams.get('supplier') || searchParams.get('contact');
+    if (paramSupplier) {
+      setSupplierFilter(paramSupplier);
+    }
+  }, [searchParams]);
+
   const [locationFilter, setLocationFilter] =
     useState('');
 
@@ -84,7 +94,7 @@ export default function PurchaseDue() {
    * Filter options
    */
   const supplierOptions = useMemo(() => {
-    return [
+    const list = [
       ...new Map(
         rows.map((row) => {
           const name =
@@ -97,7 +107,11 @@ export default function PurchaseDue() {
     ].sort((a, b) =>
       a.localeCompare(b)
     );
-  }, [rows]);
+    if (supplierFilter && !list.includes(supplierFilter)) {
+      list.unshift(supplierFilter);
+    }
+    return list;
+  }, [rows, supplierFilter]);
 
   const locationOptions = useMemo(() => {
     return [
@@ -128,7 +142,9 @@ export default function PurchaseDue() {
 
       const matchesSupplier =
         !supplierFilter ||
-        supplier === supplierFilter;
+        supplier.toLowerCase() === supplierFilter.toLowerCase() ||
+        supplier.toLowerCase().includes(supplierFilter.toLowerCase()) ||
+        String(row.supplier_id) === supplierFilter;
 
       const matchesLocation =
         !locationFilter ||
@@ -271,7 +287,7 @@ export default function PurchaseDue() {
     } catch (err) {
       setModalError(
         err.message ||
-          'Could not record this payment.'
+        'Could not record this payment.'
       );
     } finally {
       setSubmitting(false);
@@ -374,26 +390,7 @@ export default function PurchaseDue() {
           ))}
         </select>
 
-        <select
-          value={locationFilter}
-          onChange={(e) =>
-            setLocationFilter(e.target.value)
-          }
-          className="data-sort-select"
-        >
-          <option value="">
-            All Locations
-          </option>
 
-          {locationOptions.map((location) => (
-            <option
-              key={location}
-              value={location}
-            >
-              {location}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="card list-panel">
@@ -416,13 +413,7 @@ export default function PurchaseDue() {
                 toggleSortKey={sort.toggleSortKey}
               />
 
-              <SortableHeader
-                label="Location"
-                sortKey="location"
-                currentSortKey={sort.sortKey}
-                sortDirection={sort.sortDirection}
-                toggleSortKey={sort.toggleSortKey}
-              />
+
 
               <SortableHeader
                 label="Date"
@@ -480,8 +471,8 @@ export default function PurchaseDue() {
                     className="muted table-empty"
                   >
                     {search.isActive ||
-                    supplierFilter ||
-                    locationFilter
+                      supplierFilter ||
+                      locationFilter
                       ? 'No matching purchases found.'
                       : 'Nothing outstanding — all purchases are paid up.'}
                   </td>
@@ -498,9 +489,7 @@ export default function PurchaseDue() {
                       'Cash / unspecified'}
                   </td>
 
-                  <td>
-                    {r.locations?.name || '—'}
-                  </td>
+
 
                   <td>{r.purchase_date}</td>
 

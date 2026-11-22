@@ -44,6 +44,11 @@ function getSales(filters = {}) {
 
   const params = { business_id, is_active };
 
+  if (filters.customer_id) {
+    sql += ` AND s.customer_id = @customer_id`;
+    params.customer_id = filters.customer_id;
+  }
+
   if (Array.isArray(scopedLocationIds) && scopedLocationIds.length > 0) {
     sql += ` AND s.location_id IN (${scopedLocationIds.map((_, i) => `@loc${i}`).join(',')})`;
     scopedLocationIds.forEach((id, i) => { params[`loc${i}`] = id; });

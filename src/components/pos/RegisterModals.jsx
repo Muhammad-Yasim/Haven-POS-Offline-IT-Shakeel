@@ -55,29 +55,12 @@ export function OpenRegisterModal({
   return (
     <div className="pos-modal-backdrop">
       <div className="pos-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Open register — {activeLocName}</h2>
+        <h2>Open register</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: -6 }}>
           Count the cash currently in the drawer before you start selling.
         </p>
 
         <form onSubmit={submit} className="pos-modal-form">
-          {locations && locations.length > 1 && (
-            <div className="field">
-              <label>Location *</label>
-              <select
-                value={currentLocId}
-                onChange={handleLocationSelect}
-                disabled={submitting}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--navy-border)' }}
-              >
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           <div className="field">
             <label>Opening cash *</label>

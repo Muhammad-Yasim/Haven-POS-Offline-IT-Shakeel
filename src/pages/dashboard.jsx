@@ -656,28 +656,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {isOwner && (
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="dash-filter-select"
-          >
-            <option value="">All Locations</option>
-            {locationsList.map((loc) => (
-              <option key={loc.id} value={loc.id}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-        )}
 
-        <span className="muted dash-filter-note">
-          {isOwner
-            ? locationFilter
-              ? `Filtered for ${locationsList.find((l) => String(l.id) === String(locationFilter))?.name || 'Location'}`
-              : 'All Locations Summary'
-            : 'My Location Summary'}
-        </span>
       </div>
 
       <div className="dash-summary-grid">
@@ -951,9 +930,7 @@ export default function Dashboard() {
                       Customer
                     </th>
 
-                    <th>
-                      Location
-                    </th>
+
 
                     <th>
                       Date
@@ -989,10 +966,7 @@ export default function Dashboard() {
                             'Walk-in'}
                         </td>
 
-                        <td>
-                          {s.locationName ||
-                            '—'}
-                        </td>
+
 
                         <td>
                           {s.sale_date}
@@ -1073,9 +1047,7 @@ export default function Dashboard() {
                       Supplier
                     </th>
 
-                    <th>
-                      Location
-                    </th>
+
 
                     <th>
                       Date
@@ -1111,10 +1083,7 @@ export default function Dashboard() {
                             'Cash / unspecified'}
                         </td>
 
-                        <td>
-                          {p.locationName ||
-                            '—'}
-                        </td>
+
 
                         <td>
                           {p.purchase_date}
@@ -1197,9 +1166,7 @@ export default function Dashboard() {
                       Category
                     </th>
 
-                    <th>
-                      Location
-                    </th>
+
 
                     <th>
                       On Hand
@@ -1230,10 +1197,7 @@ export default function Dashboard() {
                             '—'}
                         </td>
 
-                        <td>
-                          {p.locationName ||
-                            '—'}
-                        </td>
+
 
                         <td className="dash-due-cell">
                           {p.qty}
@@ -1296,9 +1260,7 @@ export default function Dashboard() {
                       Customer
                     </th>
 
-                    <th>
-                      Location
-                    </th>
+
 
                     <th>
                       Status
@@ -1324,10 +1286,7 @@ export default function Dashboard() {
                           {s.customerName}
                         </td>
 
-                        <td>
-                          {s.locationName ||
-                            '—'}
-                        </td>
+
 
                         <td>
                           <span className="badge badge-warning">

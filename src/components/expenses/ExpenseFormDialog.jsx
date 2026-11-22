@@ -51,9 +51,9 @@ export default function ExpenseFormDialog({
   }, [open, business?.id, expenseId, isEdit]);
 
   useEffect(() => {
-    if (!open || isEdit || locations.length !== 1) return;
+    if (!open || isEdit || locations.length === 0) return;
     setForm((current) => (
-      current.location_id ? current : { ...current, location_id: locations[0].id }
+      current.location_id ? current : { ...current, location_id: locations[0]?.id || 1 }
     ));
   }, [open, isEdit, locations]);
 
@@ -77,8 +77,9 @@ export default function ExpenseFormDialog({
       setError('Expense title is required.');
       return;
     }
-    if (!form.location_id || !form.category_id || !form.amount) {
-      setError('Location, category, and amount are required.');
+    const locId = form.location_id || locations[0]?.id || 1;
+    if (!form.category_id || !form.amount) {
+      setError('Category and amount are required.');
       return;
     }
 
@@ -149,15 +150,7 @@ export default function ExpenseFormDialog({
                     </select>
                   </div>
 
-                  <div className="field">
-                    <label>Business location *</label>
-                    <select value={form.location_id} onChange={update('location_id')} required>
-                      <option value="">Select location…</option>
-                      {locations.map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
-                  </div>
+
 
                   <div className="field">
                     <label>Expense date *</label>

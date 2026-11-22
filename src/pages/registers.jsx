@@ -53,27 +53,13 @@ export default function Registers() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {isOwner && (
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid var(--navy-border)' }}
-            >
-              <option value="">All locations</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          )}
           <button className="btn btn-secondary" onClick={() => window.print()}>🖨 Print</button>
         </div>
       </div>
 
       <PrintReportHeader
         title="Registers History"
-        filters={[
-          { label: 'Location', value: locationFilter ? locations.find(l => String(l.id) === locationFilter)?.name : 'All Locations' },
-        ]}
+        filters={[]}
       />
 
       <div className="card list-panel">
@@ -81,7 +67,6 @@ export default function Registers() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Location</th>
               <th>Opened by</th>
               <th>Opened at</th>
               <th>Closed at</th>
@@ -93,15 +78,14 @@ export default function Registers() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={9} className="muted table-empty">Loading…</td></tr>
+              <tr><td colSpan={8} className="muted table-empty">Loading…</td></tr>
             )}
             {!loading && rows.length === 0 && (
-              <tr><td colSpan={9} className="muted table-empty">No registers yet.</td></tr>
+              <tr><td colSpan={8} className="muted table-empty">No registers yet.</td></tr>
             )}
             {!loading && rows.map((r) => (
               <tr key={r.id}>
                 <td>#{r.id}</td>
-                <td>{r.locations?.name || '—'}</td>
                 <td>{`${r.users?.first_name || ''} ${r.users?.last_name || ''}`.trim() || '—'}</td>
                 <td>{formatTimestamp(r.opened_at, business?.time_zone)}</td>
                 <td>{r.closed_at ? formatTimestamp(r.closed_at, business?.time_zone) : '—'}</td>

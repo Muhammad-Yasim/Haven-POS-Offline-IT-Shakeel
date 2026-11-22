@@ -783,11 +783,6 @@ function recordPurchaseDuePayment({ purchaseId, amount, paymentMethod, paidOn })
       purchaseId,
     });
 
-    // Update purchase_status to 'paid' when fully settled
-    if (remaining <= 0) {
-      db.prepare(`UPDATE purchases SET purchase_status = 'paid' WHERE id = @purchaseId`).run({ purchaseId });
-    }
-
     if (purchase.supplier_id) {
       db.prepare(`
         INSERT INTO contact_ledger (

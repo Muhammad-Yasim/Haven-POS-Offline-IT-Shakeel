@@ -30,9 +30,9 @@ export default function SettingsLayout({ children, title, subtitle }) {
             <NavLink to="/categories" className="settings-nav-link">
               <span className="settings-nav-icon">🗂️</span> Categories
             </NavLink>
-            <NavLink to="/tax-rates" className="settings-nav-link">
+            {/* <NavLink to="/tax-rates" className="settings-nav-link">
               <span className="settings-nav-icon">🧾</span> Tax Rates
-            </NavLink>
+            </NavLink> */}
           </div>
 
           {isOwner && (
