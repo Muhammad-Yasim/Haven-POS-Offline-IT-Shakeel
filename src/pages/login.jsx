@@ -89,6 +89,10 @@ export default function Login() {
               <span className="auth-feature-dot" />
               Local Data Security &amp; Safety
             </div>
+            <div className="auth-feature-item">
+              <span className="auth-feature-dot" />
+              Contact: 0334-4890651 | 0328-9395432
+            </div>
           </div>
         </div>
 

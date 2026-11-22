@@ -11,8 +11,14 @@ import { jsPDF } from 'jspdf';
 export const downloadPDF = async (filenameOrElement = 'Report.pdf', maybeOrientationOrFilename = 'portrait') => {
   let targetFilename = 'Report.pdf';
   let targetOrientation = 'portrait';
+  let targetElement = null;
 
-  if (typeof maybeOrientationOrFilename === 'string' && maybeOrientationOrFilename.endsWith('.pdf')) {
+  if (typeof filenameOrElement === 'object' && filenameOrElement !== null) {
+    targetElement = filenameOrElement;
+    targetFilename = typeof maybeOrientationOrFilename === 'string' && maybeOrientationOrFilename.endsWith('.pdf')
+      ? maybeOrientationOrFilename
+      : 'Report.pdf';
+  } else if (typeof maybeOrientationOrFilename === 'string' && maybeOrientationOrFilename.endsWith('.pdf')) {
     targetFilename = maybeOrientationOrFilename;
     targetOrientation = 'portrait';
   } else {
@@ -34,8 +40,8 @@ export const downloadPDF = async (filenameOrElement = 'Report.pdf', maybeOrienta
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
   try {
-    const element = document.querySelector('.app-content');
-    if (!element) throw new Error('.app-content not found');
+    const element = targetElement || document.querySelector('.app-content');
+    if (!element) throw new Error('PDF export element not found');
 
     // 4. Capture the element — start from its top-left corner exactly
     const canvas = await html2canvas(element, {

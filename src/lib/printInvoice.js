@@ -487,6 +487,29 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     padding: 10px;
     background: #fff;
   }
+  .invoice-action-bar {
+    max-width: 740px;
+    margin: 0 auto 10px auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .invoice-action-bar button {
+    border: 0;
+    border-radius: 5px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .invoice-save-button {
+    background: #2563eb;
+    color: #fff;
+  }
+  .invoice-print-button {
+    background: #e5e7eb;
+    color: #111827;
+  }
   .receipt-page {
     max-width: 740px;
     margin: 0 auto;
@@ -665,13 +688,20 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     body {
       padding: 0;
     }
+    .invoice-action-bar {
+      display: none !important;
+    }
   }
 </style>
 </head>
 <body>
+  <div class="invoice-action-bar">
+    <button type="button" class="invoice-save-button" onclick="window.print()">💾 Save to Computer</button>
+    <button type="button" class="invoice-print-button" onclick="window.print()">🖨 Print</button>
+  </div>
   <div class="receipt-page">
     <div class="header-banner">
-      <img src="${INVOICE_HEADER_DATA_URL}" alt="Shahzad Computers & Security" />
+      <img src="${INVOICE_HEADER_DATA_URL}" alt="Earth iT Center" />
     </div>
 
     <div class="doc-title">${esc(documentType || 'SALE ORDER')}</div>
@@ -733,7 +763,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
 
         <div class="signature-box">
           <img src="${INVOICE_SIGNATURE_DATA_URL}" alt="Signature" class="sig-image" />
-          <div class="sig-name">Abdul Qayyuam</div>
+          <div class="sig-name">Raja Shakeel</div>
           <div class="sig-title">Signature</div>
         </div>
       </div>
@@ -743,7 +773,6 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
   <script>
     window.onload = function () {
       window.focus();
-      window.print();
     };
   </script>
 </body>

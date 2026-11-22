@@ -13,6 +13,7 @@ import useLocationScope from '../hooks/useLocationScope.js';
 import EmptyState from '../components/EmptyState.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { INVOICE_HEADER_DATA_URL } from '../lib/invoiceAssets.js';
+import { downloadPDF } from '../utils/pdfGenerator.js';
 
 export default function Contacts() {
   const { business, can, profile } = useAuth();
@@ -1736,6 +1737,22 @@ export default function Contacts() {
                   type="button"
                   className="btn btn-primary btn-sm"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  onClick={() => {
+                    const safeName = (ledgerModal.contact.name || 'Party')
+                      .replace(/[&/\\?%*:|"<>]/g, '-')
+                      .replace(/\s+/g, '_');
+                    const element = document.querySelector('.khata-printable-content');
+                    if (element) {
+                      downloadPDF(element, `${safeName}_Ledger.pdf`);
+                    }
+                  }}
+                >
+                  💾 Save to Computer
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                   onClick={() => window.print()}
                 >
                   🖨️ Print Statement
@@ -2232,10 +2249,10 @@ export default function Contacts() {
                             color: '#000',
                           }}
                         >
-                          Abdul Qayyuam
+                          Raja Shakeel
                         </div>
                         <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>
-                          Abdul Qayyuam
+                          Raja Shakeel
                         </div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: '#000' }}>
                           Authorized Signature

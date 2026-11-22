@@ -24,6 +24,10 @@ const { checkUsageLimit, startUsageTracking, stopUsageTracking } = require('./us
 // ---------------------------------------------------------------------------
 const isDev = !app.isPackaged;
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.havenpos.app');
+}
+
 // ---------------------------------------------------------------------------
 // Initialise the database (must happen before IPC handlers are registered)
 // ---------------------------------------------------------------------------
@@ -63,7 +67,7 @@ function createWindow() {
     autoHideMenuBar: true,
     icon: isDev
       ? path.join(__dirname, '../public/icon.ico')
-      : path.join(process.resourcesPath, 'icon.ico'),
+      : path.join(__dirname, '../dist/icon.ico'),
     webPreferences: {
       contextIsolation: true,       // renderer cannot access Node.js
       nodeIntegration: false,      // no require() in renderer
@@ -86,7 +90,6 @@ function createWindow() {
   if (isDev) {
     // Development: Vite dev server
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
   } else {
     // Production: built index.html
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
