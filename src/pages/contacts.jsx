@@ -689,7 +689,7 @@ export default function Contacts() {
           <table
             className="data-table"
             style={{
-              fontSize: '13px',
+              fontSize: '14px',
               tableLayout: 'fixed',
               width: '100%',
             }}
@@ -1782,7 +1782,7 @@ export default function Contacts() {
               </div>
             </div>
 
-            {/* ── Printable Statement Body (Exact Receipt Header Format) ── */}
+            {/* ── Printable Statement Body ── */}
             <div className="khata-printable-content">
               {/* Receipt Header Banner Image */}
               <div className="khata-header-banner" style={{ width: '100%', marginBottom: 8 }}>
@@ -1793,11 +1793,11 @@ export default function Contacts() {
                 />
               </div>
 
-              {/* Document Title matching SALE ORDER format */}
+              {/* Document Title */}
               <div
                 style={{
                   textAlign: 'center',
-                  fontSize: 18,
+                  fontSize: 21,
                   fontWeight: 800,
                   letterSpacing: '0.06em',
                   color: '#000',
@@ -1807,11 +1807,11 @@ export default function Contacts() {
                 }}
               >
                 {ledgerModal.contact.contact_type === 'supplier'
-                  ? 'SUPPLIER KHATA & TRANSACTION STATEMENT'
-                  : 'CUSTOMER KHATA & TRANSACTION STATEMENT'}
+                  ? 'SUPPLIER  STATEMENT'
+                  : 'PARTY STATEMENT'}
               </div>
 
-              {/* Bill To & Metadata Row matching Receipt Format */}
+              {/* Bill To & Metadata Row */}
               <div
                 style={{
                   display: 'flex',
@@ -1821,119 +1821,44 @@ export default function Contacts() {
                   paddingBottom: 12,
                   borderBottom: '1.5px solid #000',
                   fontFamily: 'Arial, sans-serif',
-                  fontSize: 13,
+                  fontSize: 14.5,
                   lineHeight: '1.45',
                 }}
               >
                 {/* Left: Party info */}
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13.5, color: '#333' }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#333' }}>
                     {ledgerModal.contact.contact_type === 'supplier' ? 'Supplier Details' : 'Bill To'}
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#000', marginTop: 2 }}>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: '#000', marginTop: 2 }}>
                     {ledgerModal.contact.name}
                   </div>
                   {ledgerModal.contact.business_name && (
-                    <div style={{ color: '#444' }}>{ledgerModal.contact.business_name}</div>
+                    <div style={{ color: '#444', fontSize: 14 }}>{ledgerModal.contact.business_name}</div>
                   )}
-                  <div style={{ color: '#444' }}>
+                  <div style={{ color: '#444', fontSize: 14 }}>
                     {ledgerModal.contact.address || 'Mandar Road Bhalwal'}
                   </div>
-                  <div style={{ color: '#444' }}>
+                  <div style={{ color: '#444', fontSize: 14 }}>
                     {ledgerModal.contact.contact_number || '—'}
                   </div>
                 </div>
 
                 {/* Right: Statement metadata */}
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: '#000', letterSpacing: '0.02em' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#000', letterSpacing: '0.02em' }}>
                     KHATA #{ledgerModal.contact.id}
                   </div>
-                  <div style={{ marginTop: 4, color: '#333' }}>
+                  <div style={{ marginTop: 4, color: '#333', fontSize: 14.5 }}>
                     <strong>Date:</strong> {new Date().toLocaleDateString('en-GB')}
                   </div>
-                  <div style={{ marginTop: 2, color: '#333' }}>
+                  <div style={{ marginTop: 2, color: '#333', fontSize: 14.5 }}>
                     <strong>Account:</strong>{' '}
                     <span style={{ textTransform: 'capitalize' }}>
                       {ledgerModal.contact.contact_type || 'Customer'}
                     </span>
                   </div>
-                  <div style={{ marginTop: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>
-                      Current Balance:{' '}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 800,
-                        color: (balances[ledgerModal.contact.id] || 0) > 0 ? '#b91c1c' : '#047857',
-                      }}
-                    >
-                      {business?.currency} {Math.abs(Number(balances[ledgerModal.contact.id] || 0)).toFixed(2)}
-                      {(balances[ledgerModal.contact.id] || 0) > 0 ? ' (Due)' : (balances[ledgerModal.contact.id] || 0) < 0 ? ' (Advance)' : ' (Settled)'}
-                    </span>
-                  </div>
                 </div>
-              </div>
-
-              {/* ── Summary Overview Cards ── */}
-              <div
-                className="no-print"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: 10,
-                  marginBottom: 16,
-                }}
-              >
-                {/* <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-                    Total Transactionsss
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginTop: 4 }}>
-                    {(ledgerModal.sales?.length || 0) + (ledgerModal.purchases?.length || 0)}
-                  </div>
-                </div> */}
-
-                {/* <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-                    {ledgerModal.contact.contact_type === 'supplier' ? 'Total Purchased' : 'Total Billed (Sales)'}
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginTop: 4 }}>
-                    {business?.currency}{' '}
-                    {(
-                      (ledgerModal.summary?.totalSales || 0) + (ledgerModal.summary?.totalPurchases || 0)
-                    ).toFixed(2)}
-                  </div>
-                </div> */}
-
-                {/* <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-                    Total Paid
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#10b981', marginTop: 4 }}>
-                    {business?.currency}{' '}
-                    {(
-                      (ledgerModal.summary?.totalSalesPaid || 0) + (ledgerModal.summary?.totalPurchasesPaid || 0)
-                    ).toFixed(2)}
-                  </div>
-                </div> */}
-
-                {/* <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-                    Net Outstanding
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 700,
-                      color: (balances[ledgerModal.contact.id] || 0) > 0 ? '#ef4444' : '#10b981',
-                      marginTop: 4,
-                    }}
-                  >
-                    {business?.currency} {Math.abs(Number(balances[ledgerModal.contact.id] || 0)).toFixed(2)}
-                  </div>
-                </div> */}
               </div>
 
               {ledgerModal.loading ? (
@@ -1942,305 +1867,252 @@ export default function Contacts() {
                 </div>
               ) : (
                 <>
-                  {/* ── Transaction History Table (Matching Receipt Table Style) ── */}
-                  <div style={{ marginBottom: 20 }}>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: '#000',
-                        marginBottom: 8,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Complete Sales & Purchases History (With Products & Quantity)
-                    </div>
-
+                  {/* ── Main Transaction Table ── */}
+                  {/* ── Main Transaction Table ── */}
+                  <div style={{ marginBottom: 14 }}>
                     <table
                       style={{
                         width: '100%',
                         fontSize: 12.5,
                         borderCollapse: 'collapse',
                         fontFamily: 'Arial, sans-serif',
+                        border: '1px solid #000',
                       }}
                     >
                       <thead>
-                        <tr style={{ background: '#000', color: '#fff', textAlign: 'left' }}>
-                          <th style={{ padding: '8px 8px', width: '45px' }}>Sr No.</th>
-                          <th style={{ padding: '8px 8px', width: '85px' }}>Date</th>
-                          <th style={{ padding: '8px 8px', width: '100px' }}>Type / Ref</th>
-                          <th style={{ padding: '8px 8px' }}>Product Names, Quantity & Rate</th>
-                          <th style={{ padding: '8px 8px', textAlign: 'right', width: '90px' }}>Total</th>
-                          <th style={{ padding: '8px 8px', textAlign: 'right', width: '90px' }}>Paid</th>
-                          <th style={{ padding: '8px 8px', textAlign: 'right', width: '90px' }}>Due</th>
+                        <tr style={{ background: '#1e293b', color: '#fff', textAlign: 'left' }}>
+                          <th style={{ padding: '5px 6px', width: 34, borderRight: '1px solid #334155' }}>#</th>
+                          <th style={{ padding: '5px 6px', width: 80, borderRight: '1px solid #334155' }}>Date</th>
+                          <th style={{ padding: '5px 6px', borderRight: '1px solid #334155' }}>Item Name</th>
+                          <th style={{ padding: '5px 6px', width: 46, textAlign: 'center', borderRight: '1px solid #334155' }}>Qty</th>
+                          <th style={{ padding: '5px 6px', width: 40, textAlign: 'center', borderRight: '1px solid #334155' }}>Unit</th>
+                          <th style={{ padding: '5px 6px', width: 72, textAlign: 'right', borderRight: '1px solid #334155' }}>Price/Unit</th>
+                          {/* <th style={{ padding: '5px 6px', width: 78, textAlign: 'right', borderRight: '1px solid #334155' }}>Amount</th> */}
+                          <th style={{ padding: '5px 6px', width: 78, textAlign: 'right', borderRight: '1px solid #334155' }}>Total</th>
+                          <th style={{ padding: '5px 6px', width: 78, textAlign: 'right', borderRight: '1px solid #334155' }}>Paid</th>
+                          <th style={{ padding: '5px 6px', width: 78, textAlign: 'right' }}>Due</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {/* Render Sales */}
-                        {(ledgerModal.sales || []).map((sale, sIdx) => {
-                          const saleDue = Math.max(0, (Number(sale.grand_total) || 0) - (Number(sale.paid_amount) || 0));
-                          return (
-                            <tr
-                              key={`sale-${sale.id}`}
-                              style={{
-                                borderBottom: '1px solid #cbd5e1',
-                                background: sIdx % 2 === 0 ? '#fff' : '#f8fafc',
-                                verticalAlign: 'top',
-                              }}
-                            >
-                              <td style={{ padding: '8px 8px', fontWeight: 600 }}>{sIdx + 1}</td>
-                              <td style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>
-                                {sale.sale_date || (sale.created_at ? sale.created_at.slice(0, 10) : '—')}
-                              </td>
-                              <td style={{ padding: '8px 8px' }}>
-                                <span style={{ fontWeight: 700, color: '#047857' }}>SALE #{sale.id}</span>
-                                <div style={{ fontSize: 11, color: '#64748b' }}>
-                                  {sale.status || 'Confirmed'}
-                                </div>
-                              </td>
-                              <td style={{ padding: '8px 8px' }}>
-                                {sale.items && sale.items.length > 0 ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                    {sale.items.map((it, iIdx) => (
-                                      <div key={iIdx} style={{ fontSize: 12 }}>
-                                        <strong>{it.products?.name || it.product_name || `Product #${it.product_id}`}</strong>
-                                        <span style={{ color: '#475569', marginLeft: 6 }}>
-                                          — Qty: <strong>{Number(it.quantity).toFixed(2)}</strong> @ {business?.currency} {Number(it.unit_price).toFixed(2)}
-                                          {' '}= {business?.currency} {Number(it.subtotal || it.total || (it.quantity * it.unit_price)).toFixed(2)}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>
-                                    No line items recorded
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 700 }}>
-                                {business?.currency} {Number(sale.grand_total || 0).toFixed(2)}
-                              </td>
-                              <td style={{ padding: '8px 8px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>
-                                {business?.currency} {Number(sale.paid_amount || 0).toFixed(2)}
-                              </td>
-                              <td
-                                style={{
-                                  padding: '8px 8px',
-                                  textAlign: 'right',
-                                  fontWeight: 700,
-                                  color: saleDue > 0 ? '#b91c1c' : '#64748b',
-                                }}
-                              >
-                                {business?.currency} {saleDue.toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {(() => {
+                          const tableRows = [];
+                          let srNo = 0;
+                          let rowNo = 0;
 
-                        {/* Render Purchases */}
-                        {(ledgerModal.purchases || []).map((pur, pIdx) => {
-                          const pDue = Math.max(0, (Number(pur.grand_total) || 0) - (Number(pur.advance_payment) || 0));
-                          const baseIdx = (ledgerModal.sales?.length || 0) + pIdx + 1;
-                          return (
-                            <tr
-                              key={`pur-${pur.id}`}
-                              style={{
-                                borderBottom: '1px solid #cbd5e1',
-                                background: (baseIdx % 2 === 0) ? '#fff' : '#f8fafc',
-                                verticalAlign: 'top',
-                              }}
-                            >
-                              <td style={{ padding: '8px 8px', fontWeight: 600 }}>{baseIdx}</td>
-                              <td style={{ padding: '8px 8px', whiteSpace: 'nowrap' }}>
-                                {pur.purchase_date || (pur.created_at ? pur.created_at.slice(0, 10) : '—')}
-                              </td>
-                              <td style={{ padding: '8px 8px' }}>
-                                <span style={{ fontWeight: 700, color: '#2563eb' }}>PURCHASE #{pur.id}</span>
-                                {pur.supplier_invoice && (
-                                  <div style={{ fontSize: 11, color: '#64748b' }}>
-                                    Inv #{pur.supplier_invoice}
-                                  </div>
-                                )}
-                              </td>
-                              <td style={{ padding: '8px 8px' }}>
-                                {pur.items && pur.items.length > 0 ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                    {pur.items.map((it, iIdx) => (
-                                      <div key={iIdx} style={{ fontSize: 12 }}>
-                                        <strong>{it.products?.name || it.product_name || `Product #${it.product_id}`}</strong>
-                                        <span style={{ color: '#475569', marginLeft: 6 }}>
-                                          — Qty: <strong>{Number(it.quantity).toFixed(2)}</strong> @ {business?.currency} {Number(it.unit_cost).toFixed(2)}
-                                          {' '}= {business?.currency} {Number(it.line_total || (it.quantity * it.unit_cost)).toFixed(2)}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>
-                                    No line items recorded
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 700 }}>
-                                {business?.currency} {Number(pur.grand_total || 0).toFixed(2)}
-                              </td>
-                              <td style={{ padding: '8px 8px', textAlign: 'right', color: '#059669', fontWeight: 600 }}>
-                                {business?.currency} {Number(pur.advance_payment || 0).toFixed(2)}
-                              </td>
-                              <td
-                                style={{
-                                  padding: '8px 8px',
-                                  textAlign: 'right',
-                                  fontWeight: 700,
-                                  color: pDue > 0 ? '#b91c1c' : '#64748b',
-                                }}
-                              >
-                                {business?.currency} {pDue.toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                          const cell = { padding: '4px 6px', borderRight: '1px solid #e2e8f0', verticalAlign: 'top' };
+                          const num = { ...cell, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
 
-                        {/* If no sales or purchases */}
-                        {(!ledgerModal.sales || ledgerModal.sales.length === 0) &&
-                          (!ledgerModal.purchases || ledgerModal.purchases.length === 0) && (
-                            <tr>
-                              <td colSpan={7} style={{ padding: '24px 8px', textAlign: 'center', color: '#64748b' }}>
-                                No sales or purchase transactions recorded for this party.
-                              </td>
-                            </tr>
-                          )}
+                          // Builds one group of rows (one row per product) for a sale or purchase.
+                          // Total / Paid / Due are shown only on the LAST row of the group.
+                          const fmtDate = (d) => {
+                            if (!d) return '—';
+                            const dt = new Date(d);
+                            if (isNaN(dt)) return d;
+                            return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                          };
+
+                          const pushTransaction = ({ key, tx, date, priceKey, paid }) => {
+                            srNo += 1;
+                            const total = Number(tx.grand_total) || 0;
+                            const due = Math.max(0, total - paid);
+                            const items = tx.items && tx.items.length > 0 ? tx.items : [null];
+
+                            items.forEach((it, iIdx) => {
+                              const isFirst = iIdx === 0;
+                              const isLast = iIdx === items.length - 1;
+                              const bg = rowNo % 2 === 0 ? '#fff' : '#f3f4f6';
+                              rowNo += 1;
+
+                              let qty = 0;
+                              let price = 0;
+                              if (it) {
+                                qty = Number(it.quantity) || 0;
+                                price = Number(it[priceKey]) || 0;
+                              }
+
+                              tableRows.push(
+                                <tr
+                                  key={`${key}-${tx.id}-${iIdx}`}
+                                  style={{
+                                    background: bg,
+                                    borderBottom: isLast ? '1.5px solid #000' : '1px solid #e2e8f0',
+                                  }}
+                                >
+                                  <td style={{ ...cell, fontWeight: 700 }}>{isFirst ? srNo : ''}</td>
+                                  <td style={{ ...cell, whiteSpace: 'nowrap' }}>{isFirst ? date : ''}</td>
+                                  <td style={{ ...cell, color: it ? '#1e293b' : '#94a3b8', fontStyle: it ? 'normal' : 'italic' }}>
+                                    {it
+                                      ? (it.products?.name || it.product_name || `Product #${it.product_id}`)
+                                      : 'No line items recorded'}
+                                  </td>
+                                  <td style={{ ...cell, textAlign: 'center', fontWeight: 600 }}>
+                                    {it ? (qty % 1 === 0 ? qty : qty.toFixed(2)) : ''}
+                                  </td>
+                                  <td style={{ ...cell, textAlign: 'center', color: '#475569' }}>{it ? 'Pcs' : ''}</td>
+                                  <td style={num}>{it ? price.toFixed(2) : ''}</td>
+                                  <td style={{ ...num, fontWeight: 700 }}>{isLast ? total.toFixed(2) : ''}</td>
+                                  <td style={{ ...num, fontWeight: 700, color: '#059669' }}>{isLast ? paid.toFixed(2) : ''}</td>
+                                  <td
+                                    style={{
+                                      ...num,
+                                      borderRight: 'none',
+                                      fontWeight: 700,
+                                      color: isLast && due > 0 ? '#b91c1c' : '#059669',
+                                    }}
+                                  >
+                                    {isLast ? due.toFixed(2) : ''}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          };
+                          // ── SALES ──
+                          (ledgerModal.sales || []).forEach((sale) =>
+                            pushTransaction({
+                              key: 'sale',
+                              tx: sale,
+                              date: fmtDate(sale.sale_date || sale.created_at),
+                              priceKey: 'unit_price',
+                              paid: Number(sale.paid_amount) || 0,
+                            })
+                          );
+
+                          // ── PURCHASES ──
+                          (ledgerModal.purchases || []).forEach((pur) =>
+                            pushTransaction({
+                              key: 'pur',
+                              tx: pur,
+                              date: fmtDate(pur.purchase_date || pur.created_at),
+                              priceKey: 'unit_cost',
+                              paid: Number(pur.advance_payment) || 0,
+                            })
+                          );
+
+
+                          if (tableRows.length === 0) {
+                            tableRows.push(
+                              <tr key="empty">
+                                <td colSpan={10} style={{ padding: '24px 8px', textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                                  No sales or purchase transactions recorded for this party.
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return tableRows;
+                        })()}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* ── Product Quantity & Item Summary Section ── */}
-                  {ledgerModal.productSummary && ledgerModal.productSummary.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div
-                        style={{
-                          fontSize: 13.5,
-                          fontWeight: 700,
-                          color: '#000',
-                          marginBottom: 8,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                        }}
-                      >
-                        Total Products Bought / Supplied Summary
-                      </div>
-                      <table
-                        style={{
-                          width: '100%',
-                          fontSize: 12,
-                          borderCollapse: 'collapse',
-                          border: '1px solid #e2e8f0',
-                        }}
-                      >
-                        <thead>
-                          <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
-                            <th style={{ padding: '6px 8px' }}>Product Name</th>
-                            <th style={{ padding: '6px 8px', textAlign: 'center', width: '130px' }}>Total Quantity</th>
-                            <th style={{ padding: '6px 8px', textAlign: 'right', width: '140px' }}>Total Value</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {ledgerModal.productSummary.map((p, pIdx) => (
-                            <tr key={pIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '6px 8px', fontWeight: 600 }}>{p.name}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700 }}>
-                                {(p.saleQty + p.purchaseQty).toFixed(2)}
-                              </td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>
-                                {business?.currency} {(p.saleAmount + p.purchaseAmount).toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* ── Receipt Totals Bar & Note / Signature Section ── */}
+                  {/* ── Bottom: Amount in Words + Notes (left) | Totals box + Signature (right) ── */}
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'flex-start',
                       marginTop: 16,
-                      paddingTop: 12,
-                      borderTop: '1px solid #000',
+                      gap: 24,
                       fontFamily: 'Arial, sans-serif',
                     }}
                   >
-                    {/* Left: Please Note terms */}
-                    <div style={{ maxWidth: '450px', fontSize: 11, color: '#333' }}>
-                      <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 4 }}>Please Note</div>
-                      <ul style={{ margin: 0, paddingLeft: 16, lineHeight: '1.5' }}>
-                        <li>All goods and services are recorded in Khata ledger records.</li>
-                        <li>Payments and settled dues are reflected in real-time.</li>
-                        <li>Received above items in good order and condition.</li>
-                      </ul>
+                    {/* LEFT: Amount in words + Notes */}
+                    <div style={{ flex: 1, maxWidth: '55%' }}>
+                      {/* Amount in Words */}
+                      <div
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: 4,
+                          padding: '8px 12px',
+                          marginBottom: 14,
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 3 }}>
+                          Invoice Amount In Words
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
+                          {(() => {
+                            const totalAmt = (ledgerModal.summary?.totalSales || 0) + (ledgerModal.summary?.totalPurchases || 0);
+                            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+                              'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+                            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+                            function numToWords(n) {
+                              n = Math.floor(Math.abs(n));
+                              if (n === 0) return 'Zero';
+                              if (n < 20) return ones[n];
+                              if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+                              if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
+                              if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
+                              if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
+                              return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
+                            }
+                            const whole = Math.floor(totalAmt);
+                            const paise = Math.round((totalAmt - whole) * 100);
+                            return numToWords(whole) + ' Rupees' + (paise > 0 ? ' and ' + numToWords(paise) + ' Paise' : '') + ' Only';
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* Notes */}
+                      <div style={{ fontSize: 12.5, color: '#333' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Please Note</div>
+                        <ul style={{ margin: 0, paddingLeft: 16, lineHeight: '1.6' }}>
+                          <li>All goods and services are recorded in Khata ledger records.</li>
+                          <li>Payments and settled dues are reflected in real-time.</li>
+                          <li>Received above items in good order and condition.</li>
+                        </ul>
+                      </div>
                     </div>
 
-                    {/* Right: Subtotal, Grand Total & Signature */}
-                    <div style={{ minWidth: '260px' }}>
-                      <div
+                    {/* RIGHT: Totals box + Signature */}
+                    <div style={{ minWidth: '250px' }}>
+                      {/* Totals table matching image style */}
+                      <table
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          padding: '3px 0',
-                          fontSize: 13,
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          border: '1px solid #000',
+                          fontSize: 13.5,
+                          fontFamily: 'Arial, sans-serif',
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>Total Billed:</span>
-                        <span style={{ fontWeight: 700 }}>
-                          {business?.currency}{' '}
-                          {(
-                            (ledgerModal.summary?.totalSales || 0) + (ledgerModal.summary?.totalPurchases || 0)
-                          ).toFixed(2)}
-                        </span>
-                      </div>
+                        <tbody>
+                          <tr style={{ borderBottom: '1px solid #000' }}>
+                            <td style={{ padding: '7px 10px', fontWeight: 600, color: '#374151', borderRight: '1px solid #000', background: '#f8fafc' }}>
+                              Total Amount
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                              {business?.currency}{' '}
+                              {(
+                                (ledgerModal.summary?.totalSales || 0) + (ledgerModal.summary?.totalPurchases || 0)
+                              ).toFixed(2)}
+                            </td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #000' }}>
+                            <td style={{ padding: '7px 10px', fontWeight: 600, color: '#374151', borderRight: '1px solid #000', background: '#f8fafc' }}>
+                              Received
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
+                              {business?.currency}{' '}
+                              {(
+                                (ledgerModal.summary?.totalSalesPaid || 0) + (ledgerModal.summary?.totalPurchasesPaid || 0)
+                              ).toFixed(2)}
+                            </td>
+                          </tr>
+                          <tr style={{ background: '#000', color: '#fff' }}>
+                            <td style={{ padding: '9px 10px', fontWeight: 800, fontSize: 14, borderRight: '1px solid #333' }}>
+                              Current Balance
+                            </td>
+                            <td style={{ padding: '9px 10px', textAlign: 'right', fontWeight: 800, fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
+                              {business?.currency} {Math.abs(Number(balances[ledgerModal.contact.id] || 0)).toFixed(2)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          padding: '3px 0',
-                          fontSize: 13,
-                        }}
-                      >
-                        <span style={{ fontWeight: 600 }}>Total Paid:</span>
-                        <span style={{ fontWeight: 700, color: '#047857' }}>
-                          {business?.currency}{' '}
-                          {(
-                            (ledgerModal.summary?.totalSalesPaid || 0) + (ledgerModal.summary?.totalPurchasesPaid || 0)
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          padding: '6px 10px',
-                          background: '#000',
-                          color: '#fff',
-                          fontWeight: 800,
-                          fontSize: 14,
-                          marginTop: 6,
-                          borderRadius: 3,
-                        }}
-                      >
-                        <span>Grand Balance:</span>
-                        <span>
-                          {business?.currency} {Math.abs(Number(balances[ledgerModal.contact.id] || 0)).toFixed(2)}
-                        </span>
-                      </div>
-
-                      {/* Abdul Qayyuam Signature block */}
-                      <div style={{ marginTop: 28, textAlign: 'right' }}>
+                      {/* Signature block */}
+                      <div style={{ marginTop: 32, textAlign: 'right' }}>
                         <div
                           style={{
                             fontFamily: 'cursive, "Brush Script MT", Georgia, serif',
@@ -2251,10 +2123,7 @@ export default function Contacts() {
                         >
                           Raja Shakeel
                         </div>
-                        <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>
-                          Raja Shakeel
-                        </div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#000' }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#000', marginTop: 2 }}>
                           Authorized Signature
                         </div>
                       </div>

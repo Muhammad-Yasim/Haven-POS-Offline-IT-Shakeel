@@ -345,33 +345,33 @@ function buildThermalHtml({ documentType, business, party, seller, invoiceNumber
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: #000;
     width: 72mm;
     padding: 0;
   }
   .th-center { text-align: center; }
-  .th-biz-name { font-size: 15px; font-weight: bold; text-align: center; margin-bottom: 1px; }
-  .th-biz-sub { font-size: 10px; text-align: center; color: #333; margin-bottom: 1px; }
+  .th-biz-name { font-size: 17px; font-weight: bold; text-align: center; margin-bottom: 1px; }
+  .th-biz-sub { font-size: 11.5px; text-align: center; color: #333; margin-bottom: 1px; }
   .th-divider { border: none; border-top: 1px dashed #000; margin: 4px 0; }
   .th-divider-solid { border: none; border-top: 1px solid #000; margin: 4px 0; }
-  .th-doc-title { font-size: 12px; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.06em; margin: 3px 0; }
-  .th-meta { font-size: 10px; margin-bottom: 1px; display: flex; justify-content: space-between; }
+  .th-doc-title { font-size: 14px; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.06em; margin: 3px 0; }
+  .th-meta { font-size: 11.5px; margin-bottom: 1px; display: flex; justify-content: space-between; }
   .th-meta-label { color: #555; }
   .th-items { width: 100%; border-collapse: collapse; margin: 3px 0; }
-  .th-items th { font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #000; padding: 1px 0; text-align: left; }
+  .th-items th { font-size: 11.5px; text-transform: uppercase; border-bottom: 1px solid #000; padding: 2px 0; text-align: left; }
   .th-items th:last-child { text-align: right; }
-  .th-item-name { font-size: 11px; padding: 2px 0; vertical-align: top; }
-  .th-item-vals { font-size: 10px; text-align: right; vertical-align: top; white-space: nowrap; padding: 2px 0; }
+ .th-item-name { font-size: 12.5px; padding: 2px 0; vertical-align: top; }
+  .th-item-vals { font-size: 11.5px; text-align: right; vertical-align: top; white-space: nowrap; padding: 2px 0; }
   .th-item-vals span { display: block; }
   .th-totals { width: 100%; border-collapse: collapse; margin-top: 3px; }
   .th-tot-label { font-size: 10px; text-transform: uppercase; color: #333; padding: 1px 0; }
   .th-tot-value { font-size: 11px; font-weight: bold; text-align: right; padding: 1px 0; }
   tr.th-grand .th-tot-label,
-  tr.th-grand .th-tot-value { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
-  .th-footer { font-size: 10px; text-align: center; color: #333; margin-top: 4px; font-style: italic; }
-  .th-seller { font-size: 10px; text-align: center; color: #444; margin-top: 2px; }
-  .th-note { font-size: 10px; margin-top: 3px; }
+ tr.th-grand .th-tot-value { font-size: 15px; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; }
+  .th-footer { font-size: 11.5px; text-align: center; color: #333; margin-top: 4px; font-style: italic; }
+  .th-seller { font-size: 11.5px; text-align: center; color: #444; margin-top: 2px; }
+  .th-note { font-size: 11.5px; margin-top: 3px; }
   @media print {
     body { width: 72mm; }
   }
@@ -437,6 +437,13 @@ function formatReceiptDate(dateStr) {
 function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber, date, columns, rows, totals, footerNote, saleNote }) {
   const currency = business?.currency || 'Rs';
 
+
+    // File name used by the "Save to Computer" button, e.g. SALE_ORDER_SALEORD12.pdf
+  const pdfFileName =
+    `${documentType || 'Invoice'}_${invoiceNumber || ''}`
+      .replace(/[^a-z0-9_-]+/gi, '_')
+      .replace(/_+$/, '') + '.pdf';
+      
   const theadCells = columns
     .map((c) => `<th style="text-align:${c.align || 'left'}; ${c.width ? `width:${c.width};` : ''}">${esc(c.label)}</th>`)
     .join('');
@@ -469,6 +476,8 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
 <head>
 <meta charset="utf-8" />
 <title>${esc(documentType || 'SALE ORDER')}${invoiceNumber ? ' #' + esc(invoiceNumber) : ''}</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   @page {
     size: A4 portrait;
@@ -525,7 +534,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
   }
   .doc-title {
     text-align: center;
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 800;
     letter-spacing: 0.06em;
     color: #000;
@@ -543,18 +552,18 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     text-align: left;
   }
   .bill-to-label {
-    font-size: 11.5px;
+    font-size: 14px;
     font-weight: 700;
     color: #000;
     margin-bottom: 2px;
   }
   .customer-name {
-    font-size: 13.5px;
+    font-size: 16px;
     font-weight: 800;
     color: #000;
   }
   .customer-address, .customer-phone {
-    font-size: 11.5px;
+    font-size: 13.5px;
     color: #1f2937;
     margin-top: 1px;
   }
@@ -562,13 +571,13 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     text-align: right;
   }
   .order-number {
-    font-size: 17px;
+    font-size: 20px;
     font-weight: 800;
     color: #000;
     letter-spacing: 0.02em;
   }
   .order-date {
-    font-size: 12.5px;
+    font-size: 14.5px;
     font-weight: 600;
     color: #000;
     margin-top: 2px;
@@ -581,15 +590,15 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
   table.items-table th {
     background: #000 !important;
     color: #fff !important;
-    padding: 7px 10px;
-    font-size: 11.5px;
+    padding: 8px 10px;
+    font-size: 14px;
     font-weight: 700;
     border: none;
     letter-spacing: 0.02em;
   }
   table.items-table td {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 7px 10px;
+    font-size: 14px;
     font-weight: 600;
     border-bottom: 1px solid #e5e7eb;
     color: #000;
@@ -607,7 +616,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     max-width: 58%;
   }
   .please-note-title {
-    font-size: 11.5px;
+    font-size: 13.5px;
     font-weight: 800;
     color: #000;
     border-bottom: 1px solid #94a3b8;
@@ -617,7 +626,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
   .please-note-bullets {
     margin: 0;
     padding-left: 14px;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1.6;
     color: #111827;
   }
@@ -626,7 +635,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
   }
   .sale-note-box {
     margin-top: 6px;
-    font-size: 10.5px;
+    font-size: 12.5px;
     color: #374151;
     font-style: italic;
   }
@@ -644,7 +653,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
   .subtotal-row {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     color: #000;
     padding: 3px 6px;
@@ -655,9 +664,9 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 800;
-    padding: 6px 10px;
+    padding: 8px 10px;
     margin-top: 3px;
     border-radius: 1px;
   }
@@ -676,12 +685,12 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     display: block;
   }
   .sig-name {
-    font-size: 11.5px;
+    font-size: 13.5px;
     font-weight: 800;
     color: #000;
   }
   .sig-title {
-    font-size: 10px;
+    font-size: 12px;
     color: #4b5563;
   }
   @media print {
@@ -696,7 +705,7 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
 </head>
 <body>
   <div class="invoice-action-bar">
-    <button type="button" class="invoice-save-button" onclick="window.print()">💾 Save to Computer</button>
+  <button type="button" class="invoice-save-button" id="savePdfBtn" onclick="savePdf()">💾 Save to Computer</button>
     <button type="button" class="invoice-print-button" onclick="window.print()">🖨 Print</button>
   </div>
   <div class="receipt-page">
@@ -774,6 +783,33 @@ function buildInvoiceHtml({ documentType, business, party, seller, invoiceNumber
     window.onload = function () {
       window.focus();
     };
+
+    
+    function savePdf() {
+      if (typeof html2pdf === 'undefined') {
+        alert('PDF library could not load. Please check your internet connection.');
+        return;
+      }
+      var btn = document.getElementById('savePdfBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      html2pdf()
+        .set({
+          margin: [8, 12, 8, 12],
+          filename: ${JSON.stringify(pdfFileName)},
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        })
+        .from(document.querySelector('.receipt-page'))
+        .save()
+        .then(function () {
+          btn.disabled = false;
+          btn.textContent = '💾 Save to Computer';
+        });
+    }
+
   </script>
 </body>
 </html>`;

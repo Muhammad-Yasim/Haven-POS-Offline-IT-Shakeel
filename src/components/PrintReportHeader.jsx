@@ -93,7 +93,7 @@ export default function PrintReportHeader({ title, filters = [], location, filte
         }
         .prh-doc-title {
           text-align: center;
-          font-size: 16px;
+          font-size: 20px;
           font-weight: 800;
           letter-spacing: 0.06em;
           color: #000;
@@ -104,7 +104,7 @@ export default function PrintReportHeader({ title, filters = [], location, filte
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          font-size: 11.5px;
+          font-size: 14px;
           margin-bottom: 8px;
           padding: 0 2px;
         }
@@ -117,7 +117,7 @@ export default function PrintReportHeader({ title, filters = [], location, filte
           background: #f1f5f9;
           border: 1px solid #cbd5e1;
           border-radius: 3px;
-          padding: 1px 6px;
+          padding: 2px 8px;
         }
         .prh-chip-label { font-weight: 700; color: #0284c7; }
         .prh-chip-value { color: #111827; }

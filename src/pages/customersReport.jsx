@@ -84,19 +84,19 @@ const CSS = `
   }
   
   .cust-sum-label {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-secondary);
   }
   
   .cust-sum-val {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 800;
     color: var(--navy-900);
   }
   
   .cust-sum-sub {
-    font-size: 11px;
+    font-size: 12.5px;
     color: var(--text-secondary);
   }
   
@@ -106,6 +106,18 @@ const CSS = `
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
+  }
+
+  .cust-table-card .data-table th {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 12px;
+  }
+
+  .cust-table-card .data-table td {
+    font-size: 14px;
+    padding: 10px 12px;
+    line-height: 1.45;
   }
   
   .cust-table-header {
@@ -117,16 +129,16 @@ const CSS = `
   }
   
   .cust-table-title {
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--navy-900);
   }
   
   .cust-table-count {
-    font-size: 12px;
+    font-size: 13.5px;
     background: var(--navy-50);
     color: var(--navy-800);
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
     font-weight: 600;
   }
@@ -165,6 +177,19 @@ const CSS = `
     }
     .cust-table-header {
       border-bottom: 1px solid #ccc !important;
+    }
+    .cust-table-card .data-table th,
+    .cust-table-card .data-table td {
+      font-size: 14px !important;
+    }
+    .cust-sum-label {
+      font-size: 13.5px !important;
+    }
+    .cust-sum-val {
+      font-size: 22px !important;
+    }
+    .cust-sum-sub {
+      font-size: 12px !important;
     }
     body {
       background: white !important;
@@ -435,7 +460,7 @@ export default function CustomersReport() {
                     <td>
                       <span style={{ fontWeight: 600 }}>{r.customer.name}</span>
                       {r.customer.contact_number && (
-                        <div className="muted" style={{ fontSize: 11, fontWeight: 400 }}>
+                        <div className="muted" style={{ fontSize: 13, fontWeight: 400 }}>
                           {r.customer.contact_number}
                         </div>
                       )}

@@ -54,3 +54,6 @@ release-builds/
 *.db-shm
 *.db-wal
 
+
+.Haven POS Setup 0.1.0.exe
+*.exe
